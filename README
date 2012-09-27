@@ -1,0 +1,4 @@
+A matrix class.  Chances are you should never use this.  Look into Eigen 
+or Armadillo.  I thought it would be nice to know what is going on under 
+the hood; but it is just too much work.  Nonetheless, I have some code 
+that uses this class, so here it is, so that I may keep track of things.
