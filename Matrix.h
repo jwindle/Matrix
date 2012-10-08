@@ -49,6 +49,8 @@ typedef vector<double> vdouble;
 			     // Matrix //
 //////////////////////////////////////////////////////////////////////
 
+namespace Mine {
+
 class Matrix : public MatrixFrame
 {
  protected:
@@ -392,7 +394,7 @@ double sq(double x){return x * x;}
 #define UNARY(FUNC, FUNCEQ)					\
   MatrixFrame FUNC(MF a, MF b)					\
   {								\
-    sizecheck(a.vol()==b.vol());					\
+    sizecheck(a.vol()==b.vol());				\
     for(uint l = 0; l < a.vol(); l++) a(l) = FUNC(b(l));	\
     return a;							\
   }								\
@@ -408,12 +410,32 @@ double sq(double x){return x * x;}
     return a;							\
   }								\
 
+  // Since we are using a namespace.
+  using std::log; 
+  using std::exp;
+  using std::sqrt;
+  using std::sin;
+  using std::cos;
+  using std::tan;
+  using std::asin;
+  using std::acos;
+  using std::atan;
+  using std::sinh;
+  using std::cosh;
+  using std::tanh;
+  using std::fabs;
+  using std::ceil;
+  using std::floor;
+  using std::log10;
+  using std::pow;
+
 UNARY(log, logq)   UNARY(exp, expq)   UNARY(sqrt, sqrtq)
 UNARY(sin, sinq)   UNARY(cos, cosq)   UNARY(tan , tanq)
 UNARY(asin, asinq) UNARY(acos, acosq) UNARY(atan, atanq)
 UNARY(sinh, sinhq) UNARY(cosh, coshq) UNARY(tanh, tanhq)
 UNARY(fabs, fabsq) UNARY(ceil, ceilq) UNARY(floor, floorq)
-UNARY(sq, sqq)     UNARY(log10, log10q)
+UNARY(log10, log10q)
+// UNARY(sq, sqq)     
 
 #undef UNARY
 
@@ -428,13 +450,13 @@ UNARY(sq, sqq)     UNARY(log10, log10q)
   }								\
   MatrixFrame NAME(MF c, double a, MF b)			\
   {								\
-    sizecheck(c.vol()==b.vol());					\
+    sizecheck(c.vol()==b.vol());				\
     for(uint l = 0; l < b.vol(); l++) c(l) = FUNC(a, b(l));	\
     return c;							\
   }								\
   MatrixFrame NAME(MF c, MF a, double b)			\
   {								\
-    sizecheck(c.vol()==a.vol());					\
+    sizecheck(c.vol()==a.vol());				\
     for(uint l = 0; l < a.vol(); l++) c(l) = FUNC(a(l), b);	\
     return c;							\
   }								\
@@ -815,6 +837,8 @@ int svd(Matrix& U, Matrix& S, Matrix& tV, Matrix& X)
 
   return info;
 }
+
+} // End of namespace
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF CLASS //
