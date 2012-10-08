@@ -35,8 +35,6 @@ typedef unsigned int uint;
                           // MatrixFrame //
 //////////////////////////////////////////////////////////////////////
 
-namespace Mine {
-
 inline bool idxcheck(bool b){
 #ifndef NDEBUG
   if (!b) throw std::runtime_error("Index out of bounds.\n");
@@ -970,7 +968,6 @@ int chol(MF a, char uplo='L')
 
 //------------------------------------------------------------------//
 
-} // End of namespace
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF CODE //
@@ -984,7 +981,7 @@ int chol(MF a, char uplo='L')
 
 /*********************************************************************
 
-  The goal of the MatrixFrame class and the Matrix class is to
+  The goal of the matrixMatrixFrame class and the Matrix class is to
   represent arrays of matrices.  An array with only one matrix can be
   thought of simply as a matrix.  We had three goals in mind when
   creating this clss: 1) keep it simple/transparent, 2) make it easy
