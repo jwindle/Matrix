@@ -1,22 +1,35 @@
 // -*- mode: c++; fill-column: 70; -*-
 
 //////////////////////////////////////////////////////////////////////
-// Jesse Windle - jesse.windle@gmail.com - October, 2011
-// See Frame.h, the parent of this class, for operations.
-/////////////////////////////////////////////////////////////////////
 
-/*********************************************************************
+// Copyright 2012 Jesse Windle - jwindle@ices.utexas.edu
 
- This class "implements" the Frame class.  You can think the
- Matrix class as a data container and the Frame class as a view
- of that container.  See Frame.h for documentation of
- Frame class.
+// This program is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of
+// the License, or (at your option) any later version.
 
- Everything here is COLUMN MAJOR for compatibility with Fortran.
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// General Public License for more details.
 
- When compiling include -llapack .
+// You should have received a copy of the GNU Lesser General Public
+// License along with this program.  If not, see
+// <http://www.gnu.org/licenses/>.
 
-*********************************************************************/
+//////////////////////////////////////////////////////////////////////
+
+// This class "implements" the MatrixFrame class.  You can think the
+// Matrix class as a data container and the MatrixFrame class as a
+// view of that container.  See MatrixFrame.h for documentation of
+// MatrixFrame class.
+
+// Everything here is COLUMN MAJOR for compatibility with Fortran.
+
+// When compiling include -lblas -llapack.
+
+//////////////////////////////////////////////////////////////////////
 
 #ifndef __MATRIX__
 #define __MATRIX__

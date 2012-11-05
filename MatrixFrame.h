@@ -1,7 +1,24 @@
-// -*- mode: c++; fill-column: 80; -*-
+// -*- mode: c++; fill-column: 70; -*-
 
 //////////////////////////////////////////////////////////////////////
-// Jesse Windle - jesse.windle@gmail.com - November, 2011
+
+// Copyright 2012 Jesse Windle - jwindle@ices.utexas.edu
+
+// This program is free software: you can redistribute it and/or
+// modify it under the terms of the GNU Lesser General Public License
+// as published by the Free Software Foundation, either version 3 of
+// the License, or (at your option) any later version.
+
+// This program is distributed in the hope that it will be useful, but
+// WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+// General Public License for more details.
+
+// You should have received a copy of the GNU Lesser General Public
+// License along with this program.  If not, see
+// <http://www.gnu.org/licenses/>.
+
+//////////////////////////////////////////////////////////////////////
 // See appendix at end of document for additional information.
 //////////////////////////////////////////////////////////////////////
 
@@ -158,7 +175,7 @@ class MatrixFrame
     #ifndef NDEBUG  
         idxcheck(indexok(t) && allow(r,c)); 
     #endif
-        return p[t * nc + c * nr + r]; 
+        return p[t * nr*nc + c * nr + r]; 
     }
     
   const double& operator()(uint r, uint c, uint t) const
@@ -166,13 +183,13 @@ class MatrixFrame
     #ifndef NDEBUG
         idxcheck(indexok(t) && allow(r,c)); 
     #endif
-        return p[t * nc + c * nr + r]; 
+        return p[t * nr*nc + c * nr + r]; 
     }    
     
   double& get(uint r, uint c=0, uint t=0)
-  { idxcheck(indexok(t) && allow(r,c)); return p[t * nc + c * nr + r]; }
+  { idxcheck(indexok(t) && allow(r,c)); return p[t * nr*nc + c * nr + r]; }
   const double& get(uint r, uint c=0, uint t=0) const
-  { idxcheck(indexok(t) && allow(r,c)); return p[t * nc + c * nr + r]; }
+  { idxcheck(indexok(t) && allow(r,c)); return p[t * nr*nc + c * nr + r]; }
 
   // Returns the ith element of the array p.
   double& vec(uint i)
@@ -895,7 +912,7 @@ void trsm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', doub
 {
   memcheck(!overlap(a,b));
   // This checks that a is square and that the product conforms.
-  uint k = side=='R' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
+  uint k = side=='L' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
   sizecheck(k!=0);
   dtrsm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
 } // trsm
