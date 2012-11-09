@@ -34,20 +34,24 @@
 #ifndef __MATRIX__
 #define __MATRIX__
 
-#include "MatrixFrame.h"
 #include <vector>
 #include <iostream>
-#include <fstream>
 #include <string>
 #include <sstream>
 #include <cmath>
 #include <algorithm> // For min,max.
 #include <stdio.h>
 
-using std::vector;
-using std::string;
+#ifndef DISABLE_FIO
+#include <fstream>
 using std::ofstream;
 using std::ifstream;
+#endif
+
+#include "MatrixFrame.h"
+
+using std::vector;
+using std::string;
 using std::ostream;
 using std::istream;
 using std::stringstream;
@@ -131,8 +135,10 @@ class Matrix : public MatrixFrame
 
   // Read //
   uint read(      istream&  is, bool header=0, bool binary=0);
-  uint read(const string& file, bool header=0, bool binary=0);
   uint readstring(const string& s, bool header=0);
+  #ifndef DISABLE_FIO
+  uint read(const string& file, bool header=0, bool binary=0);
+  #endif
 
   // Writing is taken care of in MatrixFrame.h.
   // Matrix operations are taken care of in MatrixFrame.h
@@ -313,6 +319,7 @@ uint Matrix::read( std::istream& is, bool header, bool binary)
   return n;
 } // read
 
+#ifndef DISABLE_FIO
 uint Matrix::read(const string& file, bool header, bool binary)
 {
   std::ifstream ifs(file.c_str());
@@ -322,6 +329,7 @@ uint Matrix::read(const string& file, bool header, bool binary)
   }
   return read(ifs, header, binary);
 } // read
+#endif
 
 uint Matrix::readstring(const string& s, bool header)
 {

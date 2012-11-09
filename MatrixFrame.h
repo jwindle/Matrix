@@ -29,16 +29,24 @@
 #include <iostream>
 #include <cmath>
 #include <vector>
-#include <fstream>
 #include <string>
 #include <sstream>
 #include <stdexcept>
 #include <stdio.h>
 
-using std::vector;
-using std::string;
+#ifndef DISABLE_FIO
+#include <fstream>
 using std::ofstream;
 using std::ifstream;
+#endif
+
+#ifdef USE_R
+#include <R_ext/Utils.h>
+#include <R_ext/PrtUtil.h>
+#endif
+
+using std::vector;
+using std::string;
 using std::ostream;
 using std::istream;
 using std::stringstream;
@@ -207,6 +215,8 @@ class MatrixFrame
   // { return p; }
   inline double* getp()
   { return p; }
+  inline void setp(double *p_)
+  { p = p_; }
 
   // Array of Matrix Functions.
 
@@ -217,11 +227,14 @@ class MatrixFrame
   MatrixFrame dim(uint r, uint c, uint m=1); // Return a MF with different, compatible dim.
 
   // Read / Write.
-  bool write(      ostream&  os, bool header=0, bool binary=0);
-  bool write(const string& file, bool header=0, bool binary=0);
 
+  bool write(      ostream&  os, bool header=0, bool binary=0);
   uint  scan(      istream&  is, bool header=0, bool binary=0);
+
+  #ifndef DISABLE_FIO
+  bool write(const string& file, bool header=0, bool binary=0);
   uint  scan(const string& file, bool header=0, bool binary=0);
+  #endif
   // bool  readstring(const string& s, bool header=0);
 
   // Matrix Functions.
@@ -469,12 +482,16 @@ bool MatrixFrame::write(std::ostream& os, bool header, bool binary)
   return true;
 } // write
 
+#ifndef DISABLE_FIO
+
 bool MatrixFrame::write(const string& file, bool header, bool binary)
 {
   std::ofstream ofs(file.c_str());
   if (!ofs) return false;
   return write(ofs, header, binary);
 } // write
+
+#endif
 
 // Reads in data from a string of values until the end of the stream
 // or the end of the array of matrices is reached.  You are alerted if
@@ -520,6 +537,8 @@ uint MatrixFrame::scan( std::istream& is, bool header, bool binary)
   return i;
 } // scan
 
+#ifndef DISABLE_FIO
+
 uint MatrixFrame::scan(const string& file, bool header, bool binary)
 {
   std::ifstream ifs(file.c_str());
@@ -529,6 +548,8 @@ uint MatrixFrame::scan(const string& file, bool header, bool binary)
   }
   return scan(ifs, header, binary);
 } // read
+
+#endif
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////
