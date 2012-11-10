@@ -256,6 +256,8 @@ class Frame
 }; // MatrixFrame
 
 //////////////////////////////////////////////////////////////////////
+			    // TYPEDEF //
+//////////////////////////////////////////////////////////////////////
 
 #ifndef MF
 typedef Frame<double> MF;
@@ -266,18 +268,73 @@ typedef Frame<double> MatrixFrame;
 #endif
 
 //////////////////////////////////////////////////////////////////////
-		      // Function Definitions //
+		       // WRAPPER TO FORTRAN //
 //////////////////////////////////////////////////////////////////////
 
-// bool overlap(const MF& a, const MF& b);
-// bool hconform(const MF& a, const MF& b);
-// uint pconform(const MF& c, const MF& a, const MF& b, char transa='N', char transb='N');
-// bool dconform(const MF& a, const MF& b);
+// y = alpha x + y.
+void axpy(double alpha, MF x, MF y); 
+
+ // x'y
+double dot(MF x, MF y);
+
+// c = alpha op(a) * op(b) + beta c.
+void gemm(MF c, MF a, MF b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0); 
+
+// b = alpha op(a) * b  OR  b = alpha b * op(a) where a is triangular.
+void trmm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0);
+
+// Solve x:  op(a) x = alpha b  OR  x op(a) = alpha b, a triangular.
+// i.e: x = alpha inv(op(a)) b  OR  x = alpha b inv(op(a)).
+// The solution is overwriten into b.
+void trsm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0);
+
+// Solve a general linear system, ax = b for x.
+int gesv(MF a, MF b);
+
+// Solves ax = b for x where a is sym. pos. def.  Note: the lower (or
+// upper) portion of A is overwritten with the Cholesky decomposition.
+int posv(MF a, MF b, char uplo);
+
+// Cholesky Decomposition (in place)
+int potrf(MF a, char uplo);
+int chol(MF a, char uplo='L');
+
+//--------------------------------------------------------------------
+void daxpy(int n, double da, double* dx, int incx, double* dy, int incy);
+double ddot(int n, double* dx, int incx, double* dy, int incy);
+
+void dgemm(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
+void dtrmm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
+void dtrsm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
+
+void dgesv(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb, int& info);
+void dposv(char uplo, int n, int nrhs, double* a, int lda, double* b, int ldb, int& info);
+void dpotrf(char uplo, int n, double* a, int lda, int& info);
+
+//--------------------------------------------------------------------
+extern "C" {
+
+  // BLAS LEVEL 1 //
+
+  void daxpy_(int* N, double* DA, double* DX, int* INCX, double* DY, int* INCY);
+  double ddot_(int* N, double* DX, int* INCX, double* DY, int* INCY);
+
+  // BLAS LEVEL 3 //
+
+  void dgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
+  void dtrmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
+  void dtrsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
+
+  // LAPACK //
+
+  void dgesv_(int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
+  void dposv_(char* UPLO, int* N, int* NRHS, double* A, int* LDA, double* B, int* LDB, int* INFO);
+  void dpotrf_(char* UPLO, int* N, double* A, int* LDA, int* INFO);
+
+}
 
 //////////////////////////////////////////////////////////////////////
-//////////////////////////////////////////////////////////////////////
-//                         IMPLEMENTATION                           //
-//////////////////////////////////////////////////////////////////////
+			 // IMPLEMENTATION //
 //////////////////////////////////////////////////////////////////////
 
 //////////////////////////////////////////////////////////////////////
@@ -582,11 +639,12 @@ uint Frame<SCLR>::scan(const string& file, bool header, bool binary)
 
 // Check if MF a and MF b overlap in memory.
 
-bool overlap(const MF& a, const MF& b)
+template<typename SCLR>
+bool overlap(const Frame<SCLR>& a, const Frame<SCLR>& b)
 {
   // Get the low and the high pointer.
-  const MatrixFrame low  = &a(0) < &b(0) ? a : b;
-  const MatrixFrame high = &a(0) < &b(0) ? b : a;
+  const Frame<SCLR> low  = &a(0) < &b(0) ? a : b;
+  const Frame<SCLR> high = &a(0) < &b(0) ? b : a;
   // Check if there is overlap.  Do we need to subtract 1?  Yes.
   return (&low(0) + low.area() - 1) < &high(0) ? false : true;
 } // overlap
@@ -595,14 +653,16 @@ bool overlap(const MF& a, const MF& b)
 // Hadamard conform.  This is not commutative.  Checks if the size of
 // a is equally divided by the size of b.
 
-bool hconform(const MF& a, const MF& b)
+template<typename SCLR>
+bool hconform(const Frame<SCLR>& a, const Frame<SCLR>& b)
 {
   return ( a.area() % b.area() )==0;
 } // hconform
 
 // Matrix product conform.  Checks if c = op(a) * op(b) is valid.
 // Returns 0 if invalid and the matching dimension if valid.
-uint pconform(const MF& c, const MF& a, const MF& b, char transa='N', char transb='N')
+template<typename SCLR>
+uint pconform(const Frame<SCLR>& c, const Frame<SCLR>& a, const Frame<SCLR>& b, char transa='N', char transb='N')
 {
   uint opa_rows = transa=='T' ? a.cols() : a.rows();
   uint opa_cols = transa=='T' ? a.rows() : a.cols();
@@ -621,7 +681,8 @@ uint pconform(const MF& c, const MF& a, const MF& b, char transa='N', char trans
 } // pconform
 
 // Matrices are the same dimension.
-bool dconform(const MF& a, const MF& b)
+template<typename SCLR>
+bool dconform(const Frame<SCLR>& a, const Frame<SCLR>& b)
 {
   return ( a.rows()==b.rows() && a.cols()==b.cols() );
 }
@@ -834,7 +895,7 @@ ROWOP(divonrow,  /=) ROWOP(subonrow, -=)
 //////////////////////////////////////////////////////////////////////
 
 template<typename SCLR>
-double sum(const Frame<SCLR>& a)
+SCLR sum(const Frame<SCLR>& a)
 {
   double total = 0.0;
   for(uint i = 0; i < a.vol(); i++)
@@ -843,203 +904,10 @@ double sum(const Frame<SCLR>& a)
 }
 
 template<typename SCLR>
-double mean(const Frame<SCLR>& a)
+SCLR mean(const Frame<SCLR>& a)
 {
   return sum(a) / a.vol();
 }
-
-//////////////////////////////////////////////////////////////////////
-			 // BLAS / LAPACK //
-//////////////////////////////////////////////////////////////////////
-
-/*
-  See BLAS / LAPACK documentation at netlib.org.  The Fortran source
-  code is very regular.  The perl script BLAStoC.perl will take a BLAS
-  subroutine/function file and convert it to the necessary C code.
- */
-
-//////////////////////////////////////////////////////////////////////
-		       // WRAPPER TO FORTRAN //
-//////////////////////////////////////////////////////////////////////
-
-extern "C" {
-
-  // BLAS LEVEL 1 //
-
-  void daxpy_(int* N, double* DA, double* DX, int* INCX, double* DY, int* INCY);
-
-  double ddot_(int* N, double* DX, int* INCX, double* DY, int* INCY);
-
-  // BLAS LEVEL 3 //
-
-  void dgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
-
-  void dtrmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
-
-  void dtrsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
-
-  // LAPACK //
-
-  void dgesv_(int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
-
-  void dposv_(char* UPLO, int* N, int* NRHS, double* A, int* LDA, double* B, int* LDB, int* INFO);
-
-  void dpotrf_(char* UPLO, int* N, double* A, int* LDA, int* INFO);
-
-}
-
-//////////////////////////////////////////////////////////////////////
-		    // MatrixFrame BLAS WRAPPER //
-//////////////////////////////////////////////////////////////////////
-
-//------------------------------------------------------------------//
-// y = alpha x + y.
-
-void daxpy(int n, double da, double* dx, int incx, double* dy, int incy)
-{ daxpy_(&n, &da, dx, &incx, dy, &incy); }
-
-void axpy(double alpha, MF x, MF y)
-{
-  sizecheck(x.rows()==y.rows() && x.cols()==1 && y.cols()==1);
-  daxpy((int)x.rows(), alpha, &x(0), 1, &y(0), 1);
-}
-
-//------------------------------------------------------------------//
-// x'y
-
-double ddot(int n, double* dx, int incx, double* dy, int incy)
-{ return ddot_(&n, dx, &incx, dy, &incy); }
-
-double dot(MF x, MF y)
-{
-  #ifndef NDEBUG
-  sizecheck(x.rows()==y.rows() && x.cols()==1 && y.cols()==1);
-  #endif
-  return ddot(x.rows(), x.getp(), 1, y.getp(), 1);
-}
-
-//------------------------------------------------------------------//
-// c = alpha op(a) * op(b) + beta c.
-
-void dgemm(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc)
-{ dgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc); }
-
-void gemm(MF c, MF a, MF b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0)
-{
-  #ifndef NDEBUG
-  memcheck(!overlap(c,a) && !overlap(c,b));
-  #endif
-  // Get the dimensionality information we need.
-  int cnr = (int)c.rows(); int cnc = (int)c.cols();
-  int anr = (int)a.rows(); int bnr = (int)b.rows();
-  int k   = (int)pconform(c, a, b, ta, tb);
-  // Make sure things conform.
-  #ifndef NDEBUG
-  sizecheck(k!=0);
-  #endif
-  dgemm(ta, tb, cnr, cnc, k, alpha, &a(0), anr, &b(0), bnr, beta, &c(0), cnr);
-} // gemm
-
-//------------------------------------------------------------------//
-// b = alpha op(a) * b  OR  b = alpha b * op(a) where a is triangular.
-
-void dtrmm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb)
-{ dtrmm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
-
-void trmm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0)
-{
-  memcheck(!overlap(a,b));
-  // This checks that a is square and that the product conforms.
-  uint k = side=='L' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
-  sizecheck(k!=0);
-  dtrmm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
-} // trmm
-
-//------------------------------------------------------------------//
-// Solve x:  op(a) x = alpha b  OR  x op(a) = alpha b, a triangular.
-// i.e: x = alpha inv(op(a)) b  OR  x = alpha b inv(op(a)).
-// The solution is overwriten into b.
-
-void dtrsm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb)
-{ dtrsm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
-
-void trsm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0)
-{
-  memcheck(!overlap(a,b));
-  // This checks that a is square and that the product conforms.
-  uint k = side=='L' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
-  sizecheck(k!=0);
-  dtrsm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
-} // trsm
-
-//////////////////////////////////////////////////////////////////////
-		  // MATRIX FRAME LAPACK WRAPPER //
-//////////////////////////////////////////////////////////////////////
-
-// Solve a general linear system, ax = b for x.
-
-void dgesv(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb, int& info)
-{ dgesv_(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info); }
-
-int gesv(MF a, MF b)
-{
-  memcheck(!overlap(a, b));       // No overlap in memory.
-  sizecheck(pconform(b, a, b)!=0); // a is square and b conforms.
-  int info;
-  std::vector<int> ipiv(a.rows());
-  dgesv(a.rows(), b.cols(), &a(0), a.rows(), &ipiv[0], &b(0), b.rows(), info);
-  return info;
-}
-
-// Shorthand.
-int solve(MF a, MF b)
-{
-  return gesv(a, b);
-}
-
-//------------------------------------------------------------------//
-// Solves ax = b for x where a is sym. pos. def.  Note: the lower (or
-// upper) portion of A is overwritten with the Cholesky decomposition.
-
-void dposv(char uplo, int n, int nrhs, double* a, int lda, double* b, int ldb, int& info)
-{ dposv_(&uplo, &n, &nrhs, a, &lda, b, &ldb, &info); }
-
-int posv(MF a, MF b, char uplo)
-{
-  memcheck(!overlap(a,b));
-  sizecheck(pconform(b, a, b)!=0);
-  int info;
-  dposv(uplo, a.rows(), b.cols(), &a(0), a.rows(), &b(0), b.rows(), info);
-
-  if (info != 0) {
-    printf("Error in posv: info = %i\n", info);
-    throw std::runtime_error("aborted in posv\n");
-  }
-
-  return info;
-}
-
-//------------------------------------------------------------------//
-// Cholesky Decomposition
-
-void dpotrf(char uplo, int n, double* a, int lda, int& info)
-{ dpotrf_(&uplo, &n, a, &lda, &info); }
-
-int potrf(MF a, char uplo)
-{
-  sizecheck(a.rows()==a.cols());
-  int info = 0;
-  dpotrf(uplo, a.rows(), &a(0), a.rows(), info);
-  return info;
-}
-
-int chol(MF a, char uplo='L')
-{
-  return potrf(a, uplo);
-}
-
-//------------------------------------------------------------------//
-
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF CODE //
