@@ -581,6 +581,23 @@ Block<SCLR> rowSums(Frame<SCLR> M)
 }
 
 template<typename SCLR>
+Block<SCLR> rowMeans(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nr);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(i) += M(i,j);
+
+  for (uint i=0; i<nr; i++)
+    a(i) = a(i) / nc;
+
+  return a;
+}
+
+template<typename SCLR>
 Block<SCLR> rowSums(Block<SCLR>& a, Frame<SCLR> M)
 {
   uint nc = M.cols();
@@ -590,6 +607,8 @@ Block<SCLR> rowSums(Block<SCLR>& a, Frame<SCLR> M)
   for (uint j=1; j < nc; j++)
     for (uint i=0; i < nr; i++)
       a(i) += M(i,j);
+
+  return a;
 }
 
 template<typename SCLR>
@@ -602,6 +621,23 @@ Block<SCLR> colSums(Frame<SCLR> M)
   for (uint j=0; j < nc; j++)
     for (uint i=0; i < nr; i++)
       a(j) += M(i,j);
+
+  for (uint j=0; j<nc; j++)
+    a(j) = a(j) / nr;
+  
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> colMeans(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nc);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(j) += M(i,j) / nr;
 
   return a;
 }
