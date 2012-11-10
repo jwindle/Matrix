@@ -50,6 +50,8 @@ using std::ifstream;
 
 #include "MatrixFrame.h"
 
+typedef vector<double> vdouble;
+
 using std::vector;
 using std::string;
 using std::ostream;
@@ -58,80 +60,82 @@ using std::stringstream;
 using std::min;
 using std::max;
 
-#ifndef vdouble
-typedef vector<double> vdouble;
-#endif
-
 //////////////////////////////////////////////////////////////////////
 			     // Matrix //
 //////////////////////////////////////////////////////////////////////
 
-class Matrix : public MatrixFrame
+// Inherentence with templated classes is slightly more tricky.
+// http://stackoverflow.com/questions/1239908/why-doesnt-a-derived-template-class-have-access-to-a-base-template-class-ident
+
+template<typename SCLR>
+class Block : public Frame<SCLR>
 {
  protected:
-  vdouble v;   // vector to store data.
+  std::vector<SCLR> v;   // vector to store data.
+
+  using Frame<SCLR>::p;
+  using Frame<SCLR>::nr;
+  using Frame<SCLR>::nc;
+  using Frame<SCLR>::nm;
 
  public:
 
   // Constructors.
-  Matrix() : MatrixFrame(), v(1)
+  Block() : Frame<SCLR>(), v(1)
     { p = &v[0]; nr = 1; nc = 1; nm = 1; }
-  Matrix(uint r, uint c=1, uint n=1) : MatrixFrame(), v(r*c*n)
+  Block(uint r, uint c=1, uint n=1) : Frame<SCLR>(), v(r*c*n)
     { p = &v[0]; nr = r; nc = c; nm = n; }
-  Matrix( int r,  int c=1,  int n=1) : MatrixFrame(), v(r*c*n)
+  Block( int r,  int c=1,  int n=1) : Frame<SCLR>(), v(r*c*n)
     { p = &v[0]; nr = (uint)r; nc = (uint)c; nm = (int)n; }
-  Matrix(uint r, uint c, uint n, double f): MatrixFrame(), v(r*c*n, f)
+  Block(uint r, uint c, uint n, double f): Frame<SCLR>(), v(r*c*n, f)
     { p = &v[0]; nr = r; nc = c; nm = n; }
-  Matrix(double d, const Matrix& M) : MatrixFrame(), v(M.nr*M.nc*M.nm, d)
+  Block(SCLR d, const Block<SCLR>& M) : Frame<SCLR>(), v(M.nr*M.nc*M.nm, d)
     { p = &v[0]; nr = M.nr; nc = M.nc; nm = M.nm; }
-  Matrix(const Matrix& M) : MatrixFrame(), v(M.v)
+  Block(const Block<SCLR>& M) : Frame<SCLR>(), v(M.v)
     { p = &v[0]; nr = M.nr; nc = M.nc; nm = M.nm; }
-  Matrix(const MatrixFrame& M, uint n=1) : MatrixFrame(), v(M.vol()*n)
+  Block(const Frame<SCLR>& M, uint n=1) : Frame<SCLR>(), v(M.vol()*n)
     { p = &v[0]; nr = M.rows(); nc = M.cols(); nm = M.mats()*n;
       for(uint i = 0; i < nr*nc*nm; i++) v[i] = M(i % (nr*nc*M.mats()) ); }
-  Matrix(double d) : MatrixFrame(), v(1, d)
+  Block(SCLR d) : Frame<SCLR>(), v(1, d)
   { p = &v[0]; nr = 1; nc = 1; nm = 1; }
 
-  Matrix(const double *ptr, uint r, uint c, uint n=1) : MatrixFrame(), v(r*c*n)
+  Block(const double *ptr, uint r, uint c, uint n=1) : Frame<SCLR>(), v(r*c*n)
   { p = &v[0]; nr = r; nc = c; nm = n;
     for(uint i = 0; i < nr*nc*nm; i++) v[i] = ptr[i]; }
-  Matrix(const double *ptr,  int r,  int c,  int n=1) : MatrixFrame(), v(r*c*n)
+  Block(const double *ptr,  int r,  int c,  int n=1) : Frame<SCLR>(), v(r*c*n)
   { p = &v[0]; nr = (uint)r; nc = (uint)c; nm = (uint)n;
     for(uint i = 0; i < nr*nc*nm; i++) v[i] = ptr[i]; }
 
   // For predefined types of matrices.
-  Matrix(const string& s, uint r, uint n=1);
+  Block(const string& s, uint r, uint n=1);
 
-  // To instatiate from matrix multiplication.
-  Matrix(const MatrixFrame& a, const MatrixFrame& b, char ta='N', char tb='N', double alpha = 1.0);
-
-  // ~Matrix() {};
+  // ~Block() {};
 
   // Test equality and assign equality.
-  Matrix& operator= (const Matrix &M);      // Makes copy.
-  Matrix& operator= (const MatrixFrame &M); // Makes copy.
-  // bool    operator==(const Matrix &M) const;
+  Block<SCLR>& operator= (const Block<SCLR> &M);      // Makes copy.
+  Block<SCLR>& operator= (const Frame<SCLR> &M); // Makes copy.
+  // bool    operator==(const Block &M) const;
 
   // Iterators...
-  vector<double>::iterator begin()
+  typename std::vector<SCLR>::iterator begin()
   { return v.begin(); }
-  vector<double>::iterator end()
+  typename std::vector<SCLR>::iterator end()   
   { return v.end(); }
-  vector<double>::const_iterator begin() const
+  typename std::vector<SCLR>::const_iterator begin() const 
   { return v.begin(); }
-  vector<double>::const_iterator end() const
+  typename std::vector<SCLR>::const_iterator end() const 
   { return v.end(); }
 
   // Utility functions.
   void resize(uint r, uint c=1, uint n=1)
   { v.resize(r*c*n); p = &v[0]; nr = r; nc = c; nm = n; }
-  void clone(const MatrixFrame& M);
-  void clone(const MatrixFrame& M, const MatrixFrame& rs, const MatrixFrame& cs);
-  void clone(const MatrixFrame& M, const MatrixFrame& rs, uint c);
-  void clone(const MatrixFrame& M, uint r, const MatrixFrame& cs);
-  // void copy(const Matrix& M);
-  //void cbind(const MatrixFrame& M);
-  //void rbind(const MatrixFrame& M);
+  void clone(const Frame<SCLR>& M);
+  template<typename IDX> void clone(const Frame<SCLR>& M, const Frame<IDX>& rs, const Frame<IDX>& cs);
+  template<typename IDX> void clone(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c);
+  template<typename IDX> void clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs);
+  // void copy(const Block& M);
+  //void cbind(const Frame<SCLR>& M);
+  //void rbind(const Frame<SCLR>& M);
 
   // Read //
   uint read(      istream&  is, bool header=0, bool binary=0);
@@ -140,17 +144,31 @@ class Matrix : public MatrixFrame
   uint read(const string& file, bool header=0, bool binary=0);
   #endif
 
-  // Writing is taken care of in MatrixFrame.h.
-  // Matrix operations are taken care of in MatrixFrame.h
+  // Writing is taken care of in Frame<SCLR>.h.
+  // Block operations are taken care of in Frame<SCLR>.h
 
   
-}; // Matrix
+}; // Block
+
+// class Matrix : public Block<double>
+// {
+// public:
+
+//   // To instatiate from matrix multiplication.
+//   Matrix(const Frame<double>& a, const Frame<double>& b, char ta='N', char tb='N', double alpha = 1.0);
+
+// };
+
+#ifndef Matrix
+typedef Block<double> Matrix;
+#endif
 
 //////////////////////////////////////////////////////////////////////
 			  // Constructors //
 //////////////////////////////////////////////////////////////////////
 
-Matrix::Matrix(const string& s, uint r, uint n) : MatrixFrame(), v(1)
+template<typename SCLR>
+Block<SCLR>::Block(const string& s, uint r, uint n) : Frame<SCLR>(), v(1)
 {
   switch (s[0])
     {
@@ -158,23 +176,23 @@ Matrix::Matrix(const string& s, uint r, uint n) : MatrixFrame(), v(1)
       resize(r, r, n);
       for(uint k = 0; k < nm; k++)
 	for(uint i = 0; i < nr; i++)
-	  operator()(i,i,k) = 1;
+	  Frame<SCLR>::operator()(i,i,k) = 1;
       break;
     case '1': // The "unity" column vectors.
       resize(r, 1, n);
       for(uint k = 0; k < nm; k++)
 	for(uint i = 0; i < nr; i++)
-	  operator()(i,0,k) = 1;
+	  Frame<SCLR>::operator()(i,0,k) = 1;
       break;
     case 'N': // The Natural numbers.
       resize(r, 1, 1);
       for(uint i = 0; i < nr; i++)
-	operator()(i,0,0) = (double)(i+1);
+	Frame<SCLR>::operator()(i,0,0) = (SCLR)(i+1);
       break;
     case 'W': // The Whole numbers.
       resize(r, 1, 1);
       for(uint i = 0; i < nr; i++)
-	operator()(i,0,0) = (double)i;
+	Frame<SCLR>::operator()(i,0,0) = (SCLR)i;
       break;
     // case 'Z': // A sequence of integers.
     //   int diff = (int)n - (int)r;
@@ -192,49 +210,60 @@ Matrix::Matrix(const string& s, uint r, uint n) : MatrixFrame(), v(1)
     }
 }
 
-Matrix::Matrix(const MatrixFrame& a, const MatrixFrame& b, char ta, char tb, double alpha) : MatrixFrame(), v(1)
-{
-  uint opa_rows = ta=='T' ? a.cols() : a.rows();
-  uint opb_cols = tb=='T' ? b.rows() : b.cols();
-  resize(opa_rows, opb_cols, 1);
+// Matrix::Matrix(const Frame<double>& a, const Frame<double>& b, char ta, char tb, double alpha) : Block<double>()
+// {
+//   uint opa_rows = ta=='T' ? a.cols() : a.rows();
+//   uint opb_cols = tb=='T' ? b.rows() : b.cols();
+//   resize(opa_rows, opb_cols, 1);
+  
+//   // We trick g++ here.
+//   Frame<double> c(&v[0], opa_rows, opb_cols, (uint)1);
+//   gemm(c, a, b, ta, tb, alpha);
+// }
 
-  // We trick g++ here.
-  MatrixFrame c(&v[0], opa_rows, opb_cols, (uint)1);
-  gemm(c, a, b, ta, tb, alpha);
-}
+// template<typename SCLR>
+// Block<SCLR>::Block(const Frame<SCLR>& a, const Frame<SCLR>& b, char ta, char tb, SCLR alpha) : Frame<SCLR>(), v(1)
+// {
+//   fprintf(stderr, "You should not be using this constructor unless type is double.\n");
+//   resize(1,1,1);
+// }
 
 //////////////////////////////////////////////////////////////////////
 		       // Utility Functions //
 //////////////////////////////////////////////////////////////////////
 
-void Matrix::clone(const MatrixFrame& M)
+template<typename SCLR>
+void Block<SCLR>::clone(const Frame<SCLR>& M)
 {
   resize(M.rows(), M.cols(), M.mats());
-  copy(M);
+  Frame<SCLR>::copy(M);
 } // copy
 
-void Matrix::clone(const MatrixFrame& M, const MatrixFrame& rs, const MatrixFrame& cs)
+template<typename SCLR> template<typename IDX> 
+void Block<SCLR>::clone(const Frame<SCLR>& M, const Frame<IDX>& rs, const Frame<IDX>& cs)
 {
   resize(rs.area(), cs.area(), 1);
-  copy(M, rs, cs);
+  Frame<SCLR>::copy(M, rs, cs);
 }
 
-void Matrix::clone(const MatrixFrame& M, const MatrixFrame& rs, uint c)
+template<typename SCLR> template<typename IDX> 
+void Block<SCLR>::clone(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c)
 {
   resize(rs.area(), 1);
-  copy(M, rs, c);
+  Frame<SCLR>::copy(M, rs, c);
 }
 
-void Matrix::clone(const MatrixFrame& M, uint r, const MatrixFrame& cs)
+template<typename SCLR> template<typename IDX> 
+void Block<SCLR>::clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs)
 {
   resize(1, cs.area());
-  copy(M, r, cs);
+  Frame<SCLR>::copy(M, r, cs);
 }
 
-// void Matrix::cbind(const MatrixFrame& M)
+// void Block::cbind(const Frame<SCLR>& M)
 // {
 //   sizecheck(mats()==M.mats() && rows()==M.rows());
-//   Matrix temp(*this);
+//   Block temp(*this);
 //   resize(rows(), cols() + M.cols(), mats());
 //   for(uint m = 0; m < mats(); ++m){
 //     copy(temp[m], 0, 0);
@@ -242,11 +271,11 @@ void Matrix::clone(const MatrixFrame& M, uint r, const MatrixFrame& cs)
 //   }
 // }
 
-// Is it a bad idea to overload a function found in MatrixFrame?
+// Is it a bad idea to overload a function found in Frame<SCLR>?
 // According to Effective C++ it is, but this makes things mroe
 // intuitive.
 
-// void Matrix::copy(const Matrix& M)
+// void Block::copy(const Block& M)
 // {
 //   resize(M.rows(), M.cols(), M.mats());
 //   for(uint i = 0; i < vol(); i++) v[i] = M.vec(i);
@@ -256,7 +285,8 @@ void Matrix::clone(const MatrixFrame& M, uint r, const MatrixFrame& cs)
 		  // Assgiment and Test Equality //
 //////////////////////////////////////////////////////////////////////
 
-Matrix& Matrix::operator= (const Matrix &M)
+template<typename SCLR>
+Block<SCLR>& Block<SCLR>::operator= (const Block<SCLR> &M)
 {
   clone(M);
   return *this;
@@ -264,13 +294,14 @@ Matrix& Matrix::operator= (const Matrix &M)
 
 // May not need both of these operators.
 
-Matrix& Matrix::operator= (const MatrixFrame &M)
+template<typename SCLR>
+Block<SCLR>& Block<SCLR>::operator= (const Frame<SCLR> &M)
 {
   clone(M);
   return *this;
 } // operator=
 
-// bool Matrix::operator==(const Matrix &M) const
+// bool Block::operator==(const Block &M) const
 // {
 //   if(p==&M(0) && nr==M.rows() && nc==M.cols() && nm==M.mats()) return true;
 //   if(vol() != M.vol()) return false;
@@ -287,7 +318,8 @@ Matrix& Matrix::operator= (const MatrixFrame &M)
 // set to true these values are read from the stream and used to set
 // the dimensions of this matrix.
 
-uint Matrix::read( std::istream& is, bool header, bool binary)
+template<typename SCLR> 
+uint Block<SCLR>::read( std::istream& is, bool header, bool binary)
 {
   // Tell us if something is wrong.
   if (!is || is.eof())  return 0;
@@ -303,7 +335,7 @@ uint Matrix::read( std::istream& is, bool header, bool binary)
       is.read((char*) &m, sizeof(nm));
       resize(r, c, m);
     }
-    n = scan(is, false, true);
+    n = Frame<SCLR>::scan(is, false, true);
   }
   // Write human.
   if(!binary){
@@ -314,13 +346,14 @@ uint Matrix::read( std::istream& is, bool header, bool binary)
       is >> m;
       resize(r, c, m);
     }
-    n = scan(is, false, false);
+    n = Frame<SCLR>::scan(is, false, false);
   }
   return n;
 } // read
 
 #ifndef DISABLE_FIO
-uint Matrix::read(const string& file, bool header, bool binary)
+template<typename SCLR>
+uint Block<SCLR>::read(const string& file, bool header, bool binary)
 {
   std::ifstream ifs(file.c_str());
   if(!ifs){
@@ -331,7 +364,8 @@ uint Matrix::read(const string& file, bool header, bool binary)
 } // read
 #endif
 
-uint Matrix::readstring(const string& s, bool header)
+template<typename SCLR>
+uint Block<SCLR>::readstring(const string& s, bool header)
 {
   stringstream ss(s);
   return read(ss, header, false);
@@ -342,21 +376,22 @@ uint Matrix::readstring(const string& s, bool header)
 //////////////////////////////////////////////////////////////////////
 
 #ifndef Mat
-typedef Matrix Mat;
+typedef Block<double> Mat;
 #endif
 
 #ifndef Matrices
-typedef Matrix Matrices;
+typedef Block<double> Matrices;
 #endif
 
 //////////////////////////////////////////////////////////////////////
 			    // CASTING //
 //////////////////////////////////////////////////////////////////////
 
-// This seems like it might be unnecessary.
-Matrix cast(double d)
+// Cast scalar to Block.
+template<typename SCLR>
+Block<SCLR> cast(SCLR d)
 {
-  return Matrix(1, 1, 1, d);
+  return Block<SCLR>(1, 1, 1, d);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -365,40 +400,43 @@ Matrix cast(double d)
 
 // These form of multiplication, addition, division, and subtraction
 // will not be as fast as hprodeq, hsumeq, etc since it involves
-// returning a copy of a Matrix.  However, it will make it easier to
+// returning a copy of a Block.  However, it will make it easier to
 // read code.  There are matrix packages out there, e.g. eigen, that
 // will cleverly reduce the amount of overhead for concatenated
 // operations.  But I found it to be lacking in documentation given
 // its complexity.
 
-#define MHOP(NAME, OP, OPEQ, TYPE)				\
-  Matrix operator OP(const TYPE& a, const TYPE& b)		\
+#define MHOP(NAME, OP, OPEQ, EMPTY)				\
+  template<typename SCLR>					\
+  Block<SCLR> operator OP(const Frame<SCLR>& a, const Frame<SCLR>& b)	\
   {								\
-    MatrixFrame small = a.area() < b.area() ? a : b;		\
-    MatrixFrame big   = a.area() < b.area() ? b : a;		\
-    sizecheck(hconform(big,small));				\
-    Matrix c(big);						\
+    Frame<SCLR> small = a.area() < b.area() ? a : b;		\
+    Frame<SCLR> big   = a.area() < b.area() ? b : a;		\
+    sizecheck(hconform(big,small));		\
+    Block<SCLR> c(big);						\
     NAME(c, small, 1.0);					\
     return c;							\
   }								\
-  Matrix operator OP(const TYPE& a, double b)			\
+  template<typename SCLR>					\
+  Block<SCLR> operator OP(const Frame<SCLR>& a, SCLR b)	\
   {								\
-    Matrix c(a);						\
+    Block<SCLR> c(a);						\
     NAME(c, b);							\
     return c;							\
   }								\
-  Matrix operator OP(double b, const TYPE& a)			\
+  template<typename SCLR>					\
+  Block<SCLR> operator OP(SCLR b, const Frame<SCLR>& a)	\
   {								\
-    Matrix c(a);						\
+    Block<SCLR> c(a);						\
     NAME(c, b);							\
     return c;							\
   }								\
 
-//MHOP(hprodeq, *, *=, Matrix) MHOP(hsumeq, +, +=, Matrix)
-//MHOP(hdiveq,  /, /=, Matrix) MHOP(hsubeq, -, -=, Matrix)
+//MHOP(hprodeq, *, *=, Block) MHOP(hsumeq, +, +=, Block)
+//MHOP(hdiveq,  /, /=, Block) MHOP(hsubeq, -, -=, Block)
 
-MHOP(hprodeq, *, *=, MF) MHOP(hsumeq, +, +=, MF)
-MHOP(hdiveq,  /, /=, MF) MHOP(hsubeq, -, -=, MF)
+MHOP(hprodeq, *, *=, Frame<SCLR>) MHOP(hsumeq, +, +=, Frame<SCLR>)
+MHOP(hdiveq,  /, /=, Frame<SCLR>) MHOP(hsubeq, -, -=, Frame<SCLR>)
 
 #undef MHOP
 
@@ -411,19 +449,19 @@ double sq(double x){return x * x;}
 #endif
 
 #define UNARY(FUNC, FUNCEQ)					\
-  MatrixFrame FUNC(MF a, MF b)					\
+  MF FUNC(MF a, MF b)					\
   {								\
     sizecheck(a.vol()==b.vol());					\
     for(uint l = 0; l < a.vol(); l++) a(l) = FUNC(b(l));	\
     return a;							\
   }								\
-  Matrix FUNC(MF a)						\
+  Matrix FUNC(MF a)					\
   {								\
     Matrix c(a);						\
     FUNC(c, a);							\
     return c;							\
   }								\
-  MatrixFrame FUNCEQ(MF a)					\
+  MF FUNCEQ(MF a)					\
   {								\
     for(uint l = 0; l < a.vol(); l++) a(l) = FUNC(a(l));	\
     return a;							\
@@ -441,19 +479,19 @@ UNARY(sq, sqq)     UNARY(log10, log10q)
 // NEED TO FIX THIS.
 
 #define BINARY(FUNC, NAME)					\
-  MatrixFrame NAME(MF c, MF a, MF b)				\
+  MF NAME(MF c, MF a, MF b)				\
   {								\
     sizecheck(c.vol() == a.vol() && a.vol()==b.vol());		\
     for(uint l = 0; l < a.vol(); l++) c(l) = FUNC(a(l), b(l));	\
     return c;							\
   }								\
-  MatrixFrame NAME(MF c, double a, MF b)			\
+  MF NAME(MF c, double a, MF b)					\
   {								\
     sizecheck(c.vol()==b.vol());					\
     for(uint l = 0; l < b.vol(); l++) c(l) = FUNC(a, b(l));	\
     return c;							\
   }								\
-  MatrixFrame NAME(MF c, MF a, double b)			\
+  MF NAME(MF c, MF a, double b)			\
   {								\
     sizecheck(c.vol()==a.vol());					\
     for(uint l = 0; l < a.vol(); l++) c(l) = FUNC(a(l), b);	\
@@ -502,11 +540,12 @@ Matrix seq(double start, double end, double delta=1.0)
   return a;
 }
 
-Matrix rowSums(MF M)
+template<typename SCLR>
+Block<SCLR> rowSums(Frame<SCLR> M)
 {
   uint nc = M.cols();
   uint nr = M.rows();
-  Matrix a(nr);
+  Block<SCLR> a(nr);
 
   for (uint j=0; j < nc; j++)
     for (uint i=0; i < nr; i++)
@@ -515,7 +554,8 @@ Matrix rowSums(MF M)
   return a;
 }
 
-void rowSums(Matrix& a, MF M)
+template<typename SCLR>
+Block<SCLR> rowSums(Block<SCLR>& a, Frame<SCLR> M)
 {
   uint nc = M.cols();
   uint nr = M.rows();
@@ -526,11 +566,12 @@ void rowSums(Matrix& a, MF M)
       a(i) += M(i,j);
 }
 
-Matrix colSums(MF M)
+template<typename SCLR>
+Block<SCLR> colSums(Frame<SCLR> M)
 {
   uint nc = M.cols();
   uint nr = M.rows();
-  Matrix a(nc);
+  Block<SCLR> a(nc);
 
   for (uint j=0; j < nc; j++)
     for (uint i=0; i < nr; i++)
@@ -539,20 +580,22 @@ Matrix colSums(MF M)
   return a;
 }
 
-double maxAll(MF M)
+template<typename SCLR>
+SCLR maxAll(Frame<SCLR> M)
 {
   uint N = M.size();
-  double mx = M(0);
+  SCLR mx = M(0);
   for(uint i=1; i<N; i++) {
     mx = M(i) > mx ? M(i) : mx;
   }
   return mx;
 }
 
-double minAll(MF M)
+template<typename SCLR>
+SCLR minAll(Frame<SCLR> M)
 {
   uint N = M.size();
-  double mx = M(0);
+  SCLR mx = M(0);
   for(uint i=1; i<N; i++) {
     mx = M(i) < mx ? M(i) : mx;
   }
