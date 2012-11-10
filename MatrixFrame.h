@@ -288,6 +288,10 @@ void trmm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', doub
 // The solution is overwriten into b.
 void trsm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0);
 
+// c = alpha a' a + beta c, ta='N'
+// c = alpha a a' + beta c, ta='T'
+void syrk(MF c, MF a, char ta='N', double alpha=1.0, double beta=0.0);
+
 // Solve a general linear system, ax = b for x.
 int gesv(MF a, MF b);
 
@@ -306,6 +310,7 @@ double ddot(int n, double* dx, int incx, double* dy, int incy);
 void dgemm(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
 void dtrmm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
 void dtrsm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
+void dsyrk(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double beta, double* c, int ldc);
 
 void dgesv(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb, int& info);
 void dposv(char uplo, int n, int nrhs, double* a, int lda, double* b, int ldb, int& info);
@@ -324,6 +329,7 @@ extern "C" {
   void dgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
   void dtrmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
   void dtrsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
+  void dsyrk_(char* UPLO, char* TRANS, int* N, int* K, double* ALPHA, double* A, int* LDA, double* BETA, double* C, int* LDC);
 
   // LAPACK //
 

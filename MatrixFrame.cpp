@@ -108,6 +108,28 @@ void trsm(MF a, MF b, char uplo, char side, char ta, char diag, double alpha)
   dtrsm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
 } // trsm
 
+//------------------------------------------------------------------------------
+// C := alpha*A*A**T + beta*C, ta='N'
+// C := alpha*A**T*A + beta*C. ta='T'
+
+void dsyrk(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double beta, double* c, int ldc)
+{ return dsyrk_(&uplo, &trans, &n, &k, &alpha, a, &lda, &beta, c, &ldc); }
+
+void syrk(MF c, MF a, char ta, double alpha, double beta)
+{
+  memcheck(!overlap(c,a));
+  char tb = ta=='N' ? 'T' : 'N';
+  pconform(c, a, a, ta, tb);
+  int k = ta=='N' ? a.cols() : a.rows();
+  
+  dsyrk('U', ta, c.rows(), k, alpha, &a(0), a.rows(), beta, &c(0), c.rows());
+
+  // Better way?
+  for(int j=0; j<c.cols()-1; j++)
+    for(int i=j+1; i<c.rows(); i++)
+      c(i,j) = c(j,i);
+}
+
 //////////////////////////////////////////////////////////////////////
 		  // MATRIX FRAME LAPACK WRAPPER //
 //////////////////////////////////////////////////////////////////////
@@ -176,3 +198,4 @@ int chol(MF a, char uplo)
 }
 
 //------------------------------------------------------------------//
+
