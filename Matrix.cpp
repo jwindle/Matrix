@@ -267,11 +267,11 @@ int svd(Matrix& U, Matrix& S, Matrix& tV, Matrix& X)
 
 //------------------------------------------------------------------------------
 // this = op(a) * op(b) + alpha * this.
-void mult(Matrix& c, const Frame<double>& a, const Frame<double>& b, char ta, char tb, double alpha)
+void mult(Matrix& c, const Frame<double>& a, const Frame<double>& b, char ta, char tb, double alpha, double beta)
 {
   uint opa_rows = ta=='T' ? a.cols() : a.rows();
   uint opb_cols = tb=='T' ? b.rows() : b.cols();
   c.resize(opa_rows, opb_cols, 1);
   
-  gemm(c, a, b, ta, tb, alpha);
+  gemm(c, a, b, ta, tb, alpha, beta);
 }

@@ -168,7 +168,7 @@ typedef Block<double> Matrices;
 			  // DECLARATIONS //
 //////////////////////////////////////////////////////////////////////
 
-void mult(Matrix& c, const Frame<double>& a, const Frame<double>& b, char ta='N', char tb='N', double alpha=1.0);
+void mult(Matrix& c, const Frame<double>& a, const Frame<double>& b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0);
 
 int cg(MF& x, const MF& A, const MF& b, double tol, int max_iter);
 
