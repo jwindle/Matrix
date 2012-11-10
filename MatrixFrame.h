@@ -87,14 +87,15 @@ inline bool memcheck(bool b){
 #endif
 }
 
-class MatrixFrame
+template<typename SCLR>
+class Frame
 {
  protected:
   // I do not want to use *const p since I want to be able to resize my matrices.
-  double *p;  // Pointer to the array of matrices.
-  uint   nr;  // Number of rows.
-  uint   nc;  // Number of columns.
-  uint   nm;  // Number of matrices.
+  SCLR *p;  // Pointer to the array of matrices.
+  uint nr;  // Number of rows.
+  uint nc;  // Number of columns.
+  uint nm;  // Number of matrices.
 
   // Matrix Check
   bool allow(uint l) const
@@ -114,22 +115,22 @@ class MatrixFrame
 
  public:
   // Constructors, etc.  Do not make a constructor which copies.
-  MatrixFrame()
+  Frame()
     { p = NULL; nr = 0; nc = 0; nm = 0; }
-  MatrixFrame(double *ptr, uint r=1, uint c=1, uint m=1)
+  Frame(SCLR *ptr, uint r=1, uint c=1, uint m=1)
     { p = ptr; nr = r; nc = c; nm = m; }
-  MatrixFrame(double *ptr,  int r=1,  int c=1,  int m=1)
+  Frame(SCLR *ptr,  int r=1,  int c=1,  int m=1)
     { p = ptr; nr = (uint)r; nc = (uint)c; nm = (uint)m; }
-  MatrixFrame(const MatrixFrame & M)
+  Frame(const Frame<SCLR> & M)
     { p = M.p; nr = M.nr; nc = M.nc; nm = M.nm; }
 
-  ~MatrixFrame()
+  ~Frame()
     { p = NULL; }
 
   // Test equality and assign equality.
-  MatrixFrame& operator= (const MatrixFrame &M); // Makes copy.
-  bool         operator==(const MatrixFrame &M) const;
-  bool         sameframe (const MatrixFrame &M) const;
+  Frame<SCLR>& operator= (const Frame<SCLR> &M); // Makes copy.
+  bool         operator==(const Frame<SCLR> &M) const;
+  bool         sameframe (const Frame<SCLR> &M) const;
 
   // rows(), cols(), mats, area(), vol();
   inline uint rows() const { return nr; }
@@ -137,19 +138,19 @@ class MatrixFrame
   inline uint mats() const { return nm; }
   inline uint area() const { return nr * nc; }
   inline uint vol()  const { return nr * nc * nm; }
-  inline int  size() const { return nr * nc * nm; }
+  inline uint size() const { return nr * nc * nm; }
 
   // Matrix Access
 
   // Returns the (r,c) element of matrix.
-  double& operator()(uint r, uint c)
+  SCLR& operator()(uint r, uint c)
     { 
     #ifndef NDEBUG
         idxcheck(allow(r, c)); 
     #endif      
         return p[c * nr + r]; 
     }
-  const double& operator()(uint r, uint c) const
+  const SCLR& operator()(uint r, uint c) const
     { 
     #ifndef NDEBUG
         idxcheck(allow(r, c)); 
@@ -161,7 +162,7 @@ class MatrixFrame
 
   // Returns the lth element of array of matrices.
   // I debate whether this is confusing notation.
-  const double& operator()(uint l) const
+  const SCLR& operator()(uint l) const
     { 
     #ifndef NDEBUG
         idxcheck(l < nr*nc*nm);    
@@ -169,7 +170,7 @@ class MatrixFrame
         return p[l]; 
     }
     
-  double& operator()(uint l)
+  SCLR& operator()(uint l)
     { 
     #ifndef NDEBUG
         idxcheck(l < nr*nc*nm);   
@@ -178,7 +179,7 @@ class MatrixFrame
     }
 
   // Returns the (r,c) element of matrix[t].
-  double& operator()(uint r, uint c, uint t)
+  SCLR& operator()(uint r, uint c, uint t)
     {   
     #ifndef NDEBUG  
         idxcheck(indexok(t) && allow(r,c)); 
@@ -186,7 +187,7 @@ class MatrixFrame
         return p[t * nr*nc + c * nr + r]; 
     }
     
-  const double& operator()(uint r, uint c, uint t) const
+  const SCLR& operator()(uint r, uint c, uint t) const
     { 
     #ifndef NDEBUG
         idxcheck(indexok(t) && allow(r,c)); 
@@ -194,37 +195,37 @@ class MatrixFrame
         return p[t * nr*nc + c * nr + r]; 
     }    
     
-  double& get(uint r, uint c=0, uint t=0)
+  SCLR& get(uint r, uint c=0, uint t=0)
   { idxcheck(indexok(t) && allow(r,c)); return p[t * nr*nc + c * nr + r]; }
-  const double& get(uint r, uint c=0, uint t=0) const
+  const SCLR& get(uint r, uint c=0, uint t=0) const
   { idxcheck(indexok(t) && allow(r,c)); return p[t * nr*nc + c * nr + r]; }
 
   // Returns the ith element of the array p.
-  double& vec(uint i)
+  SCLR& vec(uint i)
   { idxcheck(i < nr*nc*nm); return p[i]; }
-  const double& vec(uint i) const
+  const SCLR& vec(uint i) const
   { idxcheck(i < nr*nc*nm); return p[i]; }
 
-  // Returns a MatrixFrame pointing to the ith matrix or,
+  // Returns a Frame pointing to the ith matrix or,
   // if there is one matrix, to the ith column.
-  MatrixFrame operator[](uint i)
-  { idxcheck(indexok(i)); return MatrixFrame(&p[0+i*area()], nr, nc); }
+  Frame<SCLR> operator[](uint i)
+  { idxcheck(indexok(i)); return Frame<SCLR>(&p[0+i*area()], nr, nc); }
 
   // Get the pointer.  Be wary.
   // const double* const getp()
   // { return p; }
-  inline double* getp()
+  inline SCLR* getp()
   { return p; }
-  inline void setp(double *p_)
+  inline void setp(SCLR *p_)
   { p = p_; }
 
   // Array of Matrix Functions.
 
-  void copy(const MatrixFrame& M);     // Copy values.
-  // void thincopy(MatrixFrame& M);    // Copy pointer and dimensions.
-  MatrixFrame fill(double);            // Fill with value.
-  MatrixFrame col(uint c, uint num=1); // The c-th to c+num-1th col.
-  MatrixFrame dim(uint r, uint c, uint m=1); // Return a MF with different, compatible dim.
+  void copy(const Frame<SCLR>& M);     // Copy values.
+  // void thincopy(Frame& M);          // Copy pointer and dimensions.
+  Frame<SCLR> fill(const SCLR& x);            // Fill with value.
+  Frame<SCLR> col(uint c, uint num=1); // The c-th to c+num-1th col.
+  Frame<SCLR> dim(uint r, uint c, uint m=1); // Return a MF with different, compatible dim.
 
   // Read / Write.
 
@@ -240,28 +241,28 @@ class MatrixFrame
   // Matrix Functions.
 
   // Fill this matrix from M starting at (r,c).
-  void copy(const MatrixFrame& M, uint r, uint c);
+  void copy(const Frame<SCLR>& M, uint r, uint c);
   // Copy the matrix M along rows rs and columns cs.
-  void copy(const MatrixFrame& M, const MatrixFrame& rs, const MatrixFrame& cs);
-  void copy(const MatrixFrame& M, const MatrixFrame& rs, uint c);
-  void copy(const MatrixFrame& M, uint r, const MatrixFrame& cs);
-  void copy_transpose(const MatrixFrame& M);
+  template<typename IDX> void copy(const Frame<SCLR>& M, const Frame<IDX>& rs, const Frame<IDX>& cs);
+  template<typename IDX> void copy(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c);
+  template<typename IDX> void copy(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs);
+  void copy_transpose(const Frame<SCLR>& M);
 
   // Set the elements in rows rs and columns cs using the matrix M.
-  void set(const MatrixFrame& rs, const MatrixFrame& cs, const MatrixFrame& M);
-  void set(const MatrixFrame& rs, uint c, const MatrixFrame& M);
-  void set(uint r, const MatrixFrame& cs, const MatrixFrame& M);
+  template<typename IDX> void set(const Frame<IDX>& rs, const Frame<IDX>& cs, const Frame<SCLR>& M);
+  template<typename IDX> void set(const Frame<IDX>& rs, uint c, const Frame<SCLR>& M);
+  template<typename IDX> void set(uint r, const Frame<IDX>& cs, const Frame<SCLR>& M);
 
 }; // MatrixFrame
 
 //////////////////////////////////////////////////////////////////////
 
 #ifndef MF
-typedef MatrixFrame MF;
+typedef Frame<double> MF;
 #endif
 
-#ifndef Frame
-typedef MatrixFrame Frame;
+#ifndef MatrixFrame
+typedef Frame<double> MatrixFrame;
 #endif
 
 //////////////////////////////////////////////////////////////////////
@@ -283,7 +284,8 @@ typedef MatrixFrame Frame;
                        // Utility Functions //
 //////////////////////////////////////////////////////////////////////
 
-void MatrixFrame::copy(const MatrixFrame& M)
+template<typename SCLR>
+void Frame<SCLR>::copy(const Frame<SCLR>& M)
 {
   if (this==&M) return;
   idxcheck(nr==M.rows() && nc==M.cols() && nm==M.mats());
@@ -291,7 +293,7 @@ void MatrixFrame::copy(const MatrixFrame& M)
 } // copy
 
 // I am now forcing a person to do this only in a constructor.
-// void MatrixFrame::thincopy(MatrixFrame& M)
+// void Frame::thincopy(Frame& M)
 // {
 //   if (this==&M) return;
 //   p  = &M(0);
@@ -300,25 +302,28 @@ void MatrixFrame::copy(const MatrixFrame& M)
 //   nm = M.mats();
 // } // thincopy
 
-MatrixFrame MatrixFrame::col(uint c, uint num)
+template<typename SCLR>
+Frame<SCLR> Frame<SCLR>::col(uint c, uint num)
 {
   // Check that these are valid parameters.
   idxcheck(allow((uint)0,c));
   idxcheck(allow((uint)0,c+num-1));
   double *ptr = &operator()(0,c);
-  return MatrixFrame(ptr, nr, num);
+  return Frame<SCLR>(ptr, nr, num);
 }
 
-MatrixFrame MatrixFrame::fill(double d)
+template<typename SCLR>
+Frame<SCLR> Frame<SCLR>::fill(const SCLR& d)
 {
   for(uint i = 0; i < vol(); i++) p[i] = d;
   return *this;
 }
 
-MatrixFrame MatrixFrame::dim(uint r, uint c, uint m)
+template<typename SCLR>
+Frame<SCLR> Frame<SCLR>::dim(uint r, uint c, uint m)
 {
   sizecheck (r*c*m==nr*nc*nm);
-  return MatrixFrame(p, r, c, m);
+  return Frame<SCLR>(p, r, c, m);
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -360,7 +365,8 @@ MatrixFrame MatrixFrame::dim(uint r, uint c, uint m)
  */
 
 // Assignment.  See discussion above.
-MatrixFrame& MatrixFrame::operator= (const MatrixFrame& M)
+template<typename SCLR>
+Frame<SCLR>& Frame<SCLR>::operator= (const Frame<SCLR>& M)
 {
   //cerr << "Warning: be careful with the assignment operator.\n"
   //     << "MatrixFrame::operator= makes a deep copy.\n";
@@ -370,7 +376,8 @@ MatrixFrame& MatrixFrame::operator= (const MatrixFrame& M)
 } // operator=
 
 // Test equality.
-bool MatrixFrame::operator==(const MatrixFrame& M) const
+template<typename SCLR>
+bool Frame<SCLR>::operator==(const Frame<SCLR>& M) const
 {
   if(sameframe(M)) return true;
   if(vol() != M.vol()) return false;
@@ -378,7 +385,8 @@ bool MatrixFrame::operator==(const MatrixFrame& M) const
   return true;
 } // operator==
 
-bool MatrixFrame::sameframe(const MatrixFrame& M) const
+template<typename SCLR>
+bool Frame<SCLR>::sameframe(const Frame<SCLR>& M) const
 {
   return (p==&M(0) && nr==M.rows() && nc==M.cols() && nm==M.mats());
 }
@@ -387,7 +395,8 @@ bool MatrixFrame::sameframe(const MatrixFrame& M) const
 			   // Comparison //
 //////////////////////////////////////////////////////////////////////
 
-MatrixFrame lt(MatrixFrame c, const MatrixFrame& a, const MatrixFrame& b)
+template<typename SCLR>
+Frame<SCLR> lt(Frame<SCLR> c, const Frame<SCLR>& a, const Frame<SCLR>& b)
 {
   sizecheck(c.vol()==a.vol() && a.vol()==b.vol());
   if(a.sameframe(b)) c.fill(1.0);
@@ -396,7 +405,8 @@ MatrixFrame lt(MatrixFrame c, const MatrixFrame& a, const MatrixFrame& b)
   return c;
 }
 
-MatrixFrame lteq(MatrixFrame c, const MatrixFrame& a, const MatrixFrame& b)
+template<typename SCLR>
+Frame<SCLR> lteq(Frame<SCLR> c, const Frame<SCLR>& a, const Frame<SCLR>& b)
 {
   sizecheck(c.vol()==a.vol() && ( a.vol()%b.vol() )==0 );
   if(a.sameframe(b)) c.fill(0.0);
@@ -405,7 +415,8 @@ MatrixFrame lteq(MatrixFrame c, const MatrixFrame& a, const MatrixFrame& b)
   return c;
 }
 
-MatrixFrame between(MatrixFrame c, const MatrixFrame a, const MatrixFrame lower, const MatrixFrame upper)
+template<typename SCLR>
+Frame<SCLR> between(Frame<SCLR> c, const Frame<SCLR> a, const Frame<SCLR> lower, const Frame<SCLR> upper)
 {
   sizecheck(c.vol()==a.vol() && a.vol()==lower.vol() && lower.vol()==upper.vol());
   for(uint i = 0; i < a.vol(); i++)
@@ -413,7 +424,7 @@ MatrixFrame between(MatrixFrame c, const MatrixFrame a, const MatrixFrame lower,
   return c;
 }
 
-// MatrixFrame within(MatrixFrame c, const MatrixFrame a, double lower, double upper)
+// Frame<SCLR> within(Frame<SCLR> c, const Frame<SCLR> a, double lower, double upper)
 // {
 //   sizecheck(c.vol()==a.vol() && a.vol()==lower.vol() && lower.vol()==upper.vol());
 //   for(uint i = 0; i < a.vol(); i++)
@@ -429,7 +440,8 @@ MatrixFrame between(MatrixFrame c, const MatrixFrame a, const MatrixFrame lower,
 // that a human reading the output will see an array of transposed
 // matrices.
 
-ostream& operator<<(ostream& os, MatrixFrame M)
+template<typename SCLR>
+ostream& operator<<(ostream& os, Frame<SCLR> M)
 {
   M.write(os, false, false);
   return os;
@@ -437,7 +449,8 @@ ostream& operator<<(ostream& os, MatrixFrame M)
 
 // Read in data from a string using scan.
 
-MatrixFrame& operator<<(MatrixFrame& M, const string& s)
+template<typename SCLR>
+Frame<SCLR>& operator<<(Frame<SCLR>& M, const string& s)
 {
   stringstream ss(s);
   M.scan(ss, false, false);
@@ -451,7 +464,8 @@ MatrixFrame& operator<<(MatrixFrame& M, const string& s)
 // Writes a matrix.  You may chose to include a header, which are the
 // dimensions of the array of matrices.
 
-bool MatrixFrame::write(std::ostream& os, bool header, bool binary)
+template<typename SCLR>
+bool Frame<SCLR>::write(std::ostream& os, bool header, bool binary)
 {
   if (!os) return false;
   // Write binary.
@@ -462,7 +476,7 @@ bool MatrixFrame::write(std::ostream& os, bool header, bool binary)
       os.write((char*) &nm, sizeof(nm));
     }
     for (uint i = 0; i < vol(); i++)
-      os.write((char*) &p[i], sizeof(double));
+      os.write((char*) &p[i], sizeof(SCLR));
   }
   // Write human.
   if(!binary){
@@ -484,7 +498,8 @@ bool MatrixFrame::write(std::ostream& os, bool header, bool binary)
 
 #ifndef DISABLE_FIO
 
-bool MatrixFrame::write(const string& file, bool header, bool binary)
+template<typename SCLR>
+bool Frame<SCLR>::write(const string& file, bool header, bool binary)
 {
   std::ofstream ofs(file.c_str());
   if (!ofs) return false;
@@ -497,7 +512,8 @@ bool MatrixFrame::write(const string& file, bool header, bool binary)
 // or the end of the array of matrices is reached.  You are alerted if
 // you do not read in enough data to fill the array.
 
-uint MatrixFrame::scan( std::istream& is, bool header, bool binary)
+template<typename SCLR>
+uint Frame<SCLR>::scan( std::istream& is, bool header, bool binary)
 {
   // Tell us if something is wrong.
   if (!is || is.eof())  return 0;
@@ -514,7 +530,7 @@ uint MatrixFrame::scan( std::istream& is, bool header, bool binary)
       // sizecheck(vol() == r*c*m); // A somewhat strict condition.
     }
     while(!is.eof() && i < vol())
-      is.read((char*) &p[i++], sizeof(double));
+      is.read((char*) &p[i++], sizeof(SCLR));
   }
   // Write human.
   if(!binary){
@@ -539,7 +555,8 @@ uint MatrixFrame::scan( std::istream& is, bool header, bool binary)
 
 #ifndef DISABLE_FIO
 
-uint MatrixFrame::scan(const string& file, bool header, bool binary)
+template<typename SCLR>
+uint Frame<SCLR>::scan(const string& file, bool header, bool binary)
 {
   std::ifstream ifs(file.c_str());
   if(!ifs){
@@ -617,7 +634,8 @@ bool dconform(const MF& a, const MF& b)
 
 // This matrix is smaller or the same area as M.
 // Fill this matrix from M starting at (r,c).
-void MatrixFrame::copy(const MatrixFrame& M, uint r, uint c)
+template<typename SCLR>
+void Frame<SCLR>::copy(const Frame<SCLR>& M, uint r, uint c)
 {
   sizecheck( (r + nr) <= M.rows() && (c + nc) <= M.cols() );
   for(uint j = 0; j < nc; j++)
@@ -625,7 +643,8 @@ void MatrixFrame::copy(const MatrixFrame& M, uint r, uint c)
       operator()(i,j) = M(r+i, c+j);
 } // copy
 
-void MatrixFrame::copy(const MatrixFrame& M, const MatrixFrame& rs, const MatrixFrame& cs)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::copy(const Frame<SCLR>& M, const Frame<IDX>& rs, const Frame<IDX>& cs)
 {
   sizecheck(rs.area()==rows() && cs.area()==cols());
   // Should check min and max of rs and cs to make sure you are in bounds.
@@ -637,7 +656,8 @@ void MatrixFrame::copy(const MatrixFrame& M, const MatrixFrame& rs, const Matrix
   }
 } // copy
 
-void MatrixFrame::copy(const MatrixFrame& M, const MatrixFrame& rs, uint c)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::copy(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c)
 {
   sizecheck(rs.area()==rows() && 1==cols());
   for(uint i = 0; i < rs.area(); i++){
@@ -645,7 +665,8 @@ void MatrixFrame::copy(const MatrixFrame& M, const MatrixFrame& rs, uint c)
   }
 } // copy
 
-void MatrixFrame::copy(const MatrixFrame& M, uint r, const MatrixFrame& cs)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::copy(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs)
 {
   sizecheck(1==rows() && cs.area()==cols());
   for(uint j = 0; j < cs.area(); j++){
@@ -653,7 +674,8 @@ void MatrixFrame::copy(const MatrixFrame& M, uint r, const MatrixFrame& cs)
   }
 } // copy
 
-void MatrixFrame::copy_transpose(const MatrixFrame& M)
+template<typename SCLR>
+void Frame<SCLR>::copy_transpose(const Frame<SCLR>& M)
 {
   sizecheck(nr==M.cols() && nc==M.rows() && nm==M.mats());
   for(uint k = 0; k < nm; ++k){
@@ -665,7 +687,8 @@ void MatrixFrame::copy_transpose(const MatrixFrame& M)
   }
 }
 
-void MatrixFrame::set(const MatrixFrame& rs, const MatrixFrame& cs, const MatrixFrame& M)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::set(const Frame<IDX>& rs, const Frame<IDX>& cs, const Frame<SCLR>& M)
 {
   sizecheck(rs.area()==M.rows() && cs.area()==M.cols());
   for(uint j = 0; j < cs.area(); j++){
@@ -675,7 +698,8 @@ void MatrixFrame::set(const MatrixFrame& rs, const MatrixFrame& cs, const Matrix
   }
 }
 
-void MatrixFrame::set(const MatrixFrame& rs, uint c, const MatrixFrame& M)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::set(const Frame<IDX>& rs, uint c, const Frame<SCLR>& M)
 {
   sizecheck(rs.area()==M.area());
   for(uint i = 0; i < rs.area(); i++){
@@ -683,7 +707,8 @@ void MatrixFrame::set(const MatrixFrame& rs, uint c, const MatrixFrame& M)
   }
 }
 
-void MatrixFrame::set(uint r, const MatrixFrame& cs, const MatrixFrame& M)
+template<typename SCLR> template<typename IDX>
+void Frame<SCLR>::set(uint r, const Frame<IDX>& cs, const Frame<SCLR>& M)
 {
   sizecheck(cs.area()==M.area());
   for(uint j = 0; j < cs.area(); j++){
@@ -710,7 +735,8 @@ void MatrixFrame::set(uint r, const MatrixFrame& cs, const MatrixFrame& M)
 
 // Hadamard Operation Equals (HOPEQ) a op= sc * b
 #define HOPEQ(NAME, OPEQ)						\
-  MatrixFrame NAME(MF a, const MF& b, double sc=1.0)			\
+  template<typename SCLR>						\
+  Frame<SCLR> NAME(Frame<SCLR> a, const Frame<SCLR>& b, SCLR sc=1.0) \
   {                                                                     \
     memcheck(!overlap(a,b));                                              \
     sizecheck(hconform(a,b));                                              \
@@ -719,13 +745,15 @@ void MatrixFrame::set(uint r, const MatrixFrame& cs, const MatrixFrame& M)
       a(i) OPEQ sc * b(i % barea);					\
     return a;								\
   }                                                                     \
-  MatrixFrame NAME(MF a, double b)					\
+  template<typename SCLR>						\
+  Frame<SCLR> NAME(Frame<SCLR> a, SCLR b)			\
   {                                                                     \
     for(uint i = 0; i < a.area(); i++)					\
       a(i) OPEQ b;							\
     return a;								\
   }                                                                     \
-  MatrixFrame& operator OPEQ(MF& a, const MF& b)			\
+  template<typename SCLR>						\
+  Frame<SCLR>& operator OPEQ(Frame<SCLR>& a, const Frame<SCLR>& b) \
   {                                                                     \
     memcheck(!overlap(a,b));                                              \
     sizecheck(hconform(a,b));                                              \
@@ -742,7 +770,8 @@ HOPEQ(hdiveq,  /=) HOPEQ(hsubeq, -=)
 
 // Hadamard Operation (HOP) c = a op sc * b
 #define HOP(NAME, OP)                                                   \
-  void NAME(MF c, const MF& a, const MF& b, double alpha=1.0, double beta=0.0)	\
+  template<typename SCLR>						\
+  void NAME(Frame<SCLR> c, const Frame<SCLR>& a, const Frame<SCLR>& b, double alpha=1.0, double beta=0.0)	\
   {                                                                     \
     bool okay = (!overlap(c,b) && !overlap(a,b)) ||			\
       (!overlap(c,a) && !overlap(c,b));					\
@@ -753,13 +782,15 @@ HOPEQ(hdiveq,  /=) HOPEQ(hsubeq, -=)
     for(uint i = 0; i < c.area(); i++)					\
       c(i) = alpha * a(i) OP b(i % barea) + beta * c(i);		\
   }                                                                     \
-  void NAME(MF c, const MF& a, double b)                                      \
+  template<typename SCLR>						\
+  void NAME(Frame<SCLR> c, const Frame<SCLR>& a, double b)                                      \
   {                                                                     \
     sizecheck(c.area()==a.area());						\
     for(uint i = 0; i < c.area(); i++)					\
       c(i) = a(i) OP b;                                                 \
   }                                                                     \
-  void NAME(MF c, double b, const MF& a)					\
+  template<typename SCLR>						\
+  void NAME(Frame<SCLR> c, double b, const Frame<SCLR>& a)					\
   {                                                                     \
     sizecheck(c.area()==a.area());						\
     for(uint i = 0; i < c.area(); i++)					\
@@ -781,7 +812,8 @@ HOP(hdiv,  /) HOP(hsub, -)
 // sub.  We require that a.cols() to be a multiple of area(b).
 
 #define ROWOP(NAME, OPEQ)			 \
-  MatrixFrame NAME(MF a, MF b)			 \
+  template<typename SCLR>						\
+  Frame<SCLR> NAME(Frame<SCLR> a, Frame<SCLR>& b)	\
   {						 \
     memcheck(!overlap(a, b));			 \
     sizecheck(a.cols()%b.area()==0);		 \
@@ -801,7 +833,8 @@ ROWOP(divonrow,  /=) ROWOP(subonrow, -=)
 			// Statistics //
 //////////////////////////////////////////////////////////////////////
 
-double sum(const MF& a)
+template<typename SCLR>
+double sum(const Frame<SCLR>& a)
 {
   double total = 0.0;
   for(uint i = 0; i < a.vol(); i++)
@@ -809,7 +842,8 @@ double sum(const MF& a)
   return total;
 }
 
-double mean(const MF& a)
+template<typename SCLR>
+double mean(const Frame<SCLR>& a)
 {
   return sum(a) / a.vol();
 }
