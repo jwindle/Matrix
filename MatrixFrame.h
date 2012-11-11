@@ -272,36 +272,47 @@ typedef Frame<double> MatrixFrame;
 //////////////////////////////////////////////////////////////////////
 
 // y = alpha x + y.
-void axpy(double alpha, MF x, MF y); 
+template<typename SCLR>
+void axpy(SCLR alpha, Frame<SCLR> x, Frame<SCLR> y); 
 
  // x'y
-double dot(MF x, MF y);
+template<typename SCLR>
+SCLR dot(Frame<SCLR> x, Frame<SCLR> y);
 
 // c = alpha op(a) * op(b) + beta c.
-void gemm(MF c, MF a, MF b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0); 
+template<typename SCLR>
+void gemm(Frame<SCLR> c, Frame<SCLR> a, Frame<SCLR> b, char ta='N', char tb='N', SCLR alpha=1.0, SCLR beta=0.0); 
 
 // b = alpha op(a) * b  OR  b = alpha b * op(a) where a is triangular.
-void trmm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0);
+template<typename SCLR>
+void trmm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', char diag='N', SCLR alpha=1.0);
 
 // Solve x:  op(a) x = alpha b  OR  x op(a) = alpha b, a triangular.
 // i.e: x = alpha inv(op(a)) b  OR  x = alpha b inv(op(a)).
 // The solution is overwriten into b.
-void trsm(MF a, MF b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0);
+template<typename SCLR>
+void trsm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', char diag='N', SCLR alpha=1.0);
 
 // c = alpha a' a + beta c, ta='N'
 // c = alpha a a' + beta c, ta='T'
-void syrk(MF c, MF a, char ta='N', double alpha=1.0, double beta=0.0);
+template<typename SCLR>
+void syrk(Frame<SCLR> c, Frame<SCLR> a, char ta='N', SCLR alpha=1.0, SCLR beta=0.0);
 
 // Solve a general linear system, ax = b for x.
-int gesv(MF a, MF b);
+template<typename SCLR>
+int gesv(Frame<SCLR> a, Frame<SCLR> b);
 
 // Solves ax = b for x where a is sym. pos. def.  Note: the lower (or
 // upper) portion of A is overwritten with the Cholesky decomposition.
-int posv(MF a, MF b, char uplo);
+template<typename SCLR>
+int posv(Frame<SCLR> a, Frame<SCLR> b, char uplo);
 
 // Cholesky Decomposition (in place)
-int potrf(MF a, char uplo);
-int chol(MF a, char uplo='L');
+template<typename SCLR>
+int potrf(Frame<SCLR> a, char uplo);
+
+template<typename SCLR>
+int chol(Frame<SCLR> a, char uplo='L');
 
 //--------------------------------------------------------------------
   
@@ -309,17 +320,23 @@ int chol(MF a, char uplo='L');
 // BLAS Level 3
 // LAPACK
 
-void daxpy(int n, double da, double* dx, int incx, double* dy, int incy);
-double ddot(int n, double* dx, int incx, double* dy, int incy);
+#define BLASDEC(TYPE) \
+  void raxpy(int n, TYPE da, TYPE* dx, int incx, TYPE* dy, int incy);	\
+  TYPE rdot(int n, TYPE* dx, int incx, TYPE* dy, int incy);		\
+									\
+  void rgemm(char transa, char transb, int m, int n, int k, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb, TYPE beta, TYPE* c, int ldc); \
+  void rtrmm(char side, char uplo, char transa, char diag, int m, int n, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb); \
+  void rtrsm(char side, char uplo, char transa, char diag, int m, int n, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb); \
+  void rsyrk(char uplo, char trans, int n, int k, TYPE alpha, TYPE* a, int lda, TYPE beta, TYPE* c, int ldc); \
+									\
+  void rgesv(int n, int nrhs, TYPE* a, int lda, int* ipiv, TYPE* b, int ldb, int& info); \
+  void rposv(char uplo, int n, int nrhs, TYPE* a, int lda, TYPE* b, int ldb, int& info); \
+  void rpotrf(char uplo, int n, TYPE* a, int lda, int& info);
 
-void dgemm(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc);
-void dtrmm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
-void dtrsm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb);
-void dsyrk(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double beta, double* c, int ldc);
+BLASDEC(double)
+BLASDEC(float)
 
-void dgesv(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb, int& info);
-void dposv(char uplo, int n, int nrhs, double* a, int lda, double* b, int ldb, int& info);
-void dpotrf(char uplo, int n, double* a, int lda, int& info);
+#undef BLASDEC
 
 //--------------------------------------------------------------------
 extern "C" {
@@ -327,6 +344,8 @@ extern "C" {
   // BLAS Level 1
   // BLAS Level 3
   // LAPACK
+
+  // double
 
   void daxpy_(int* N, double* DA, double* DX, int* INCX, double* DY, int* INCY);
   double ddot_(int* N, double* DX, int* INCX, double* DY, int* INCY);
@@ -339,6 +358,20 @@ extern "C" {
   void dgesv_(int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
   void dposv_(char* UPLO, int* N, int* NRHS, double* A, int* LDA, double* B, int* LDB, int* INFO);
   void dpotrf_(char* UPLO, int* N, double* A, int* LDA, int* INFO);
+
+  // float
+ 
+  void saxpy_(int* N, float* DA, float* DX, int* INCX, float* DY, int* INCY);
+  float sdot_(int* N, float* DX, int* INCX, float* DY, int* INCY);
+
+  void sgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, float* ALPHA, float* A, int* LDA, float* B, int* LDB, float* BETA, float* C, int* LDC);
+  void strmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, float* ALPHA, float* A, int* LDA, float* B, int* LDB);
+  void strsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, float* ALPHA, float* A, int* LDA, float* B, int* LDB);
+  void ssyrk_(char* UPLO, char* TRANS, int* N, int* K, float* ALPHA, float* A, int* LDA, float* BETA, float* C, int* LDC);
+
+  void sgesv_(int* N, int* NRHS, float* A, int* LDA, int* IPIV, float* B, int* LDB, int* INFO);
+  void sposv_(char* UPLO, int* N, int* NRHS, float* A, int* LDA, float* B, int* LDB, int* INFO);
+  void spotrf_(char* UPLO, int* N, float* A, int* LDA, int* INFO);
 
 }
 
@@ -787,6 +820,211 @@ void Frame<SCLR>::set(uint r, const Frame<IDX>& cs, const Frame<SCLR>& M)
 }
 
 //////////////////////////////////////////////////////////////////////
+                      // Operation along rows //
+//////////////////////////////////////////////////////////////////////
+
+// Sometime we want to take an operation "along rows" i.e. the
+// operation a(i,j) op= b(j % b.area()) where op may be *,+,/,-.  The
+// functions to do this are <op>onrow where <op> is prod, sum, div, or
+// sub.  We require that a.cols() to be a multiple of area(b).
+
+#define ROWOP(NAME, OPEQ)			 \
+  template<typename SCLR>						\
+  Frame<SCLR> NAME(Frame<SCLR> a, Frame<SCLR>& b)	\
+  {						 \
+    memcheck(!overlap(a, b));			 \
+    sizecheck(a.cols()%b.area()==0);		 \
+    uint barea = b.area();			 \
+    for(uint j = 0; j < a.cols(); j++)		 \
+      for(uint i = 0; i < a.rows(); i++)	 \
+        a(i,j) OPEQ b(j % barea);		 \
+    return a;					 \
+  }						 \
+
+ROWOP(prodonrow, *=) ROWOP(sumonrow, +=)
+ROWOP(divonrow,  /=) ROWOP(subonrow, -=)
+
+#undef ROWOP
+
+//////////////////////////////////////////////////////////////////////
+			// Statistics //
+//////////////////////////////////////////////////////////////////////
+
+template<typename SCLR>
+SCLR sum(const Frame<SCLR>& a)
+{
+  double total = 0.0;
+  for(uint i = 0; i < a.vol(); i++)
+    total += a(i);
+  return total;
+}
+
+template<typename SCLR>
+SCLR mean(const Frame<SCLR>& a)
+{
+  return sum(a) / a.vol();
+}
+
+//////////////////////////////////////////////////////////////////////
+			 // BLAS / LAPACK //
+//////////////////////////////////////////////////////////////////////
+
+//------------------------------------------------------------------//
+// y = alpha x + y.
+template<typename SCLR>
+void axpy(SCLR alpha, Frame<SCLR> x, Frame<SCLR> y)
+{
+  sizecheck(x.rows()==y.rows() && x.cols()==1 && y.cols()==1);
+  raxpy((int)x.rows(), alpha, &x(0), 1, &y(0), 1);
+}
+
+//------------------------------------------------------------------//
+// x'y
+template<typename SCLR>
+SCLR dot(Frame<SCLR> x, Frame<SCLR> y)
+{
+  #ifndef NDEBUG
+  sizecheck(x.rows()==y.rows() && x.cols()==1 && y.cols()==1);
+  #endif
+  return rdot(x.rows(), x.getp(), 1, y.getp(), 1);
+}
+
+//------------------------------------------------------------------//
+// c = alpha op(a) * op(b) + beta c.
+// void gemm(Frame<SCLR> c, Frame<SCLR> a, Frame<SCLR> b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0)
+template<typename SCLR>
+void gemm(Frame<SCLR> c, Frame<SCLR> a, Frame<SCLR> b, char ta, char tb, SCLR alpha, SCLR beta)
+{
+  #ifndef NDEBUG
+  memcheck(!overlap(c,a) && !overlap(c,b));
+  #endif
+  // Get the dimensionality information we need.
+  int cnr = (int)c.rows(); int cnc = (int)c.cols();
+  int anr = (int)a.rows(); int bnr = (int)b.rows();
+  int k   = (int)pconform(c, a, b, ta, tb);
+  // Make sure things conform.
+  #ifndef NDEBUG
+  sizecheck(k!=0);
+  #endif
+  rgemm(ta, tb, cnr, cnc, k, alpha, &a(0), anr, &b(0), bnr, beta, &c(0), cnr);
+} // gemm
+
+//------------------------------------------------------------------//
+// b = alpha op(a) * b  OR  b = alpha b * op(a) where a is triangular.
+
+// void trmm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0)
+template<typename SCLR>
+void trmm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side, char ta, char diag, SCLR alpha)
+{
+  memcheck(!overlap(a,b));
+  // This checks that a is square and that the product conforms.
+  uint k = side=='L' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
+  sizecheck(k!=0);
+  rtrmm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
+} // trmm
+
+//------------------------------------------------------------------//
+// Solve x:  op(a) x = alpha b  OR  x op(a) = alpha b, a triangular.
+// i.e: x = alpha inv(op(a)) b  OR  x = alpha b inv(op(a)).
+// The solution is overwriten into b.
+
+// void trsm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', char diag='N', double alpha=1.0)
+template<typename SCLR>
+void trsm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side, char ta, char diag, SCLR alpha)
+{
+  memcheck(!overlap(a,b));
+  // This checks that a is square and that the product conforms.
+  uint k = side=='L' ? pconform(b, a, b, ta, 'N') : pconform(b, b, a, 'N', ta);
+  sizecheck(k!=0);
+  rtrsm(side, uplo, ta, diag, b.rows(), b.cols(), alpha, &a(0), a.rows(), &b(0), b.rows());
+} // trsm
+
+//------------------------------------------------------------------------------
+// C := alpha*A*A**T + beta*C, ta='N'
+// C := alpha*A**T*A + beta*C. ta='T'
+
+template<typename SCLR>
+void syrk(Frame<SCLR> c, Frame<SCLR> a, char ta, SCLR alpha, SCLR beta)
+{
+  memcheck(!overlap(c,a));
+  char tb = ta=='N' ? 'T' : 'N';
+  pconform(c, a, a, ta, tb);
+  int k = ta=='N' ? a.cols() : a.rows();
+  
+  rsyrk('U', ta, c.rows(), k, alpha, &a(0), a.rows(), beta, &c(0), c.rows());
+
+  // Better way?
+  for(uint j=0; j<c.cols()-1; j++)
+    for(uint i=j+1; i<c.rows(); i++)
+      c(i,j) = c(j,i);
+}
+
+//////////////////////////////////////////////////////////////////////
+		  // MATRIX FRAME LAPACK WRAPPER //
+//////////////////////////////////////////////////////////////////////
+
+// Solve a general linear system, ax = b for x.
+
+template<typename SCLR>
+int gesv(Frame<SCLR> a, Frame<SCLR> b)
+{
+  memcheck(!overlap(a, b));       // No overlap in memory.
+  sizecheck(pconform(b, a, b)!=0); // a is square and b conforms.
+  int info;
+  std::vector<int> ipiv(a.rows());
+  rgesv(a.rows(), b.cols(), &a(0), a.rows(), &ipiv[0], &b(0), b.rows(), info);
+  return info;
+}
+
+// Shorthand.
+template<typename SCLR>
+int solve(Frame<SCLR> a, Frame<SCLR> b)
+{
+  return gesv(a, b);
+}
+
+//------------------------------------------------------------------//
+// Solves ax = b for x where a is sym. pos. def.  Note: the lower (or
+// upper) portion of A is overwritten with the Cholesky decomposition.
+
+template<typename SCLR>
+int posv(Frame<SCLR> a, Frame<SCLR> b, char uplo)
+{
+  memcheck(!overlap(a,b));
+  sizecheck(pconform(b, a, b)!=0);
+  int info;
+  rposv(uplo, a.rows(), b.cols(), &a(0), a.rows(), &b(0), b.rows(), info);
+
+  if (info != 0) {
+    printf("Error in posv: info = %i\n", info);
+    throw std::runtime_error("aborted in posv\n");
+  }
+
+  return info;
+}
+
+//------------------------------------------------------------------//
+// Cholesky Decomposition
+
+template<typename SCLR>
+int potrf(Frame<SCLR> a, char uplo)
+{
+  sizecheck(a.rows()==a.cols());
+  int info = 0;
+  rpotrf(uplo, a.rows(), &a(0), a.rows(), info);
+  return info;
+}
+
+// int chol(Frame<SCLR> a, char uplo='L')
+template<typename SCLR>
+int chol(Frame<SCLR> a, char uplo)
+{
+  return potrf(a, uplo);
+}
+
+//------------------------------------------------------------------//
+
+//////////////////////////////////////////////////////////////////////
                       // Hadamard Operations //
 //////////////////////////////////////////////////////////////////////
 
@@ -871,52 +1109,6 @@ HOP(hprod, *) HOP(hsum, +)
 HOP(hdiv,  /) HOP(hsub, -)
 
 #undef HOP
-
-//////////////////////////////////////////////////////////////////////
-                      // Operation along rows //
-//////////////////////////////////////////////////////////////////////
-
-// Sometime we want to take an operation "along rows" i.e. the
-// operation a(i,j) op= b(j % b.area()) where op may be *,+,/,-.  The
-// functions to do this are <op>onrow where <op> is prod, sum, div, or
-// sub.  We require that a.cols() to be a multiple of area(b).
-
-#define ROWOP(NAME, OPEQ)			 \
-  template<typename SCLR>						\
-  Frame<SCLR> NAME(Frame<SCLR> a, Frame<SCLR>& b)	\
-  {						 \
-    memcheck(!overlap(a, b));			 \
-    sizecheck(a.cols()%b.area()==0);		 \
-    uint barea = b.area();			 \
-    for(uint j = 0; j < a.cols(); j++)		 \
-      for(uint i = 0; i < a.rows(); i++)	 \
-        a(i,j) OPEQ b(j % barea);		 \
-    return a;					 \
-  }						 \
-
-ROWOP(prodonrow, *=) ROWOP(sumonrow, +=)
-ROWOP(divonrow,  /=) ROWOP(subonrow, -=)
-
-#undef ROWOP
-
-//////////////////////////////////////////////////////////////////////
-			// Statistics //
-//////////////////////////////////////////////////////////////////////
-
-template<typename SCLR>
-SCLR sum(const Frame<SCLR>& a)
-{
-  double total = 0.0;
-  for(uint i = 0; i < a.vol(); i++)
-    total += a(i);
-  return total;
-}
-
-template<typename SCLR>
-SCLR mean(const Frame<SCLR>& a)
-{
-  return sum(a) / a.vol();
-}
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF CODE //
