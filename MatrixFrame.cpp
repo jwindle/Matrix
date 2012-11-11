@@ -61,14 +61,19 @@ void rpotrf(char uplo, int n, double* a, int lda, int& info)
 ////////////////////////////////////////////////////////////////////////////////
 // FLOAT
 
-void raxpy(int n, float da, float* dx, int incx, float* dy, int incy)
-{ saxpy_(&n, &da, dx, &incx, dy, &incy); }
+#ifndef USE_R
 
-float rdot(int n, float* dx, int incx, float* dy, int incy)
+// It seems that there is a problem with using BLAS Level 1 with float.
+void raxpy(int n, float da, float* dx, int incx, float* dy, int incy)
 { 
-  throw std::runtime_error("Error: sdot_ always returns 0.\n");
-  return sdot_(&n, dx, &incx, dy, &incy); 
+  saxpy_(&n, &da, dx, &incx, dy, &incy); 
 }
+
+// float rdot(int n, float* dx, int incx, float* dy, int incy)
+// { 
+//   throw std::runtime_error("Error: sdot_ always returns 0.\n");
+//   // return sdot_(&n, dx, &incx, dy, &incy); 
+// }
 
 //------------------------------------------------------------------------------
 
@@ -95,3 +100,4 @@ void rposv(char uplo, int n, int nrhs, float* a, int lda, float* b, int ldb, int
 void rpotrf(char uplo, int n, float* a, int lda, int& info)
 { spotrf_(&uplo, &n, a, &lda, &info); }
 
+#endif
