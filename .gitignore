@@ -22,7 +22,6 @@ blasqr.ps
 dgesvd.f.txt
 dsyevd.f.txt
 test
-test.c
 test.o
 *.o
 dsyrk.f.txt
