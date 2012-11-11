@@ -304,6 +304,11 @@ int potrf(MF a, char uplo);
 int chol(MF a, char uplo='L');
 
 //--------------------------------------------------------------------
+  
+// BLAS Level 1
+// BLAS Level 3
+// LAPACK
+
 void daxpy(int n, double da, double* dx, int incx, double* dy, int incy);
 double ddot(int n, double* dx, int incx, double* dy, int incy);
 
@@ -319,19 +324,17 @@ void dpotrf(char uplo, int n, double* a, int lda, int& info);
 //--------------------------------------------------------------------
 extern "C" {
 
-  // BLAS LEVEL 1 //
+  // BLAS Level 1
+  // BLAS Level 3
+  // LAPACK
 
   void daxpy_(int* N, double* DA, double* DX, int* INCX, double* DY, int* INCY);
   double ddot_(int* N, double* DX, int* INCX, double* DY, int* INCY);
-
-  // BLAS LEVEL 3 //
 
   void dgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
   void dtrmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
   void dtrsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
   void dsyrk_(char* UPLO, char* TRANS, int* N, int* K, double* ALPHA, double* A, int* LDA, double* BETA, double* C, int* LDC);
-
-  // LAPACK //
 
   void dgesv_(int* N, int* NRHS, double* A, int* LDA, int* IPIV, double* B, int* LDB, int* INFO);
   void dposv_(char* UPLO, int* N, int* NRHS, double* A, int* LDA, double* B, int* LDB, int* INFO);
