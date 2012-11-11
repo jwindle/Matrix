@@ -168,29 +168,56 @@ typedef Block<double> Matrices;
 			  // DECLARATIONS //
 //////////////////////////////////////////////////////////////////////
 
-void mult(Matrix& c, const Frame<double>& a, const Frame<double>& b, char ta='N', char tb='N', double alpha=1.0, double beta=0.0);
+template<typename SCLR> 
+void mult(Block<SCLR>& c, Frame<SCLR>& a, Frame<SCLR>& b, char ta='N', char tb='N', SCLR alpha=1.0, SCLR beta=0.0);
 
-int cg(MF& x, const MF& A, const MF& b, double tol, int max_iter);
+template<typename SCLR>
+int cg(Frame<SCLR>& x, Frame<SCLR>& A, Frame<SCLR>& b, SCLR tol, int max_iter);
 
 // ax = b -> b := x;
-int symsolve(MF a, Matrix& b, char uplo='L');
-int syminv(MF a, Matrix& ainv, char uplo='L');
+template<typename SCLR>
+int symsolve(Frame<SCLR> a, Block<SCLR>& b, char uplo='L');
+template<typename SCLR>
+int syminv(Frame<SCLR> a, Block<SCLR>& ainv, char uplo='L');
 
 // Get the Cholesky decomposition of a matrix a.
-int chol(Matrix& c, MF a, char uplo='L');
+template<typename SCLR>
+int chol(Block<SCLR>& c, Frame<SCLR> a, char uplo='L');
 
-int symeigen(Matrix& evec, Matrix& eval, MF symmat);
-int symsqrt(Matrix& rt, MF symmat);
-int syminvsqrt(Matrix& rt, MF symmat);
-int svd(Matrix& U, Matrix& S, Matrix& tV, Matrix& X);
+template<typename SCLR>
+int symeigen(Block<SCLR>& evec, Block<SCLR>& eval, Frame<SCLR> symmat);
+template<typename SCLR>
+int symsqrt(Block<SCLR>& rt, Frame<SCLR> symmat);
+template<typename SCLR>
+int syminvsqrt(Block<SCLR>& rt, Frame<SCLR> symmat);
+template<typename SCLR>
+int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X);
 
-void dsyevd(char jobz, char uplo, int n, double* a, int lda, double* w, double* work, int lwork, int* iwork, int liwork, int* info);
-void dgesvd(char jobu, char jobvt, int m, int n, double* a, int lda, double* s, double* u, int ldu, double* vt, int ldvt, double*work, int lwork, int* info);
+//--------------------------------------------------------------------
+
+#define BLASDEC(SCLR)							\
+									\
+  void rsyevd(char jobz, char uplo, int n, SCLR* a, int lda, SCLR* w, SCLR* work, int lwork, int* iwork, int liwork, int* info); \
+  void rgesvd(char jobu, char jobvt, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR*work, int lwork, int* info);
+
+BLASDEC(double)
+BLASDEC(float)
+
+#undef BLASDEC
+
+//--------------------------------------------------------------------
 
 extern "C" {
 
+  // DOUBLE
+
   void dsyevd_(char* JOBZ, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
+
+  // FLOAT
+
+  void ssyevd_(char* JOBZ, char* UPLO, int* N, float* A, int* LDA, float* W, float* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
+  void sgesvd_(char* JOBU, char* JOBVT, int* M, int* N, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* INFO);
 
 }
 
@@ -407,6 +434,421 @@ Block<SCLR> cast(SCLR d)
 }
 
 //////////////////////////////////////////////////////////////////////
+			       // R //
+//////////////////////////////////////////////////////////////////////
+
+template<typename SCLR>
+Block<SCLR> seq(SCLR start, SCLR end, SCLR delta=1)
+{
+  double sign = end - start < 0 ? -1.0 : 1.0;
+  double new_delta = sign * fabs((double)delta);
+  double N_double = (end-start) / new_delta;
+  if (N_double < 0) fprintf(stderr, "Problem in seq: N_double < 0");
+  int N = floor(N_double) + 1;
+
+  Block<SCLR> a(N);
+  a(0) = start;
+  for (int i=1; i<N; i++)
+    a(i) = a(i-1) + (SCLR)delta;
+
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> rowSums(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nr);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(i) += M(i,j);
+
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> rowMeans(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nr);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(i) += M(i,j);
+
+  for (uint i=0; i<nr; i++)
+    a(i) = a(i) / nc;
+
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> rowSums(Block<SCLR>& a, Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  a = M.col(0);
+
+  for (uint j=1; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(i) += M(i,j);
+
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> colSums(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nc);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(j) += M(i,j);
+
+  for (uint j=0; j<nc; j++)
+    a(j) = a(j) / nr;
+  
+  return a;
+}
+
+template<typename SCLR>
+Block<SCLR> colMeans(Frame<SCLR> M)
+{
+  uint nc = M.cols();
+  uint nr = M.rows();
+  Block<SCLR> a(nc);
+
+  for (uint j=0; j < nc; j++)
+    for (uint i=0; i < nr; i++)
+      a(j) += M(i,j) / nr;
+
+  return a;
+}
+
+template<typename SCLR>
+SCLR maxAll(Frame<SCLR> M)
+{
+  uint N = M.size();
+  SCLR mx = M(0);
+  for(uint i=1; i<N; i++) {
+    mx = M(i) > mx ? M(i) : mx;
+  }
+  return mx;
+}
+
+template<typename SCLR>
+SCLR minAll(Frame<SCLR> M)
+{
+  uint N = M.size();
+  SCLR mx = M(0);
+  for(uint i=1; i<N; i++) {
+    mx = M(i) < mx ? M(i) : mx;
+  }
+  return mx;
+}
+
+//////////////////////////////////////////////////////////////////////
+			   // transpose //
+//////////////////////////////////////////////////////////////////////
+
+// A = t(B)
+template<typename SCLR>
+void trans(Block<SCLR>& A, Block<SCLR>& B)
+{
+  uint T = B.mats();
+  uint R = B.rows();
+  uint C = B.cols();
+  if(A.rows() != C || A.cols() != R || A.mats() != T) A.resize(C, R, T);
+  for(uint t=0; t < T; ++t)
+    for(uint i=0; i < R; ++i)
+      for(uint j=0; j < C; ++j)
+	A(j,i,t) = B(i,j,t);
+}
+
+//////////////////////////////////////////////////////////////////////
+		   // SIMPLE CONJUGATE GRADIENTS //
+//////////////////////////////////////////////////////////////////////
+
+// http://www.cs.cmu.edu/~quake-papers/painless-conjugate-gradient.pdf
+// by Jonathan Richard Shewchuk
+
+// Assumes A is positive definite.
+
+template<typename SCLR>
+int cg(Frame<SCLR>& x, Frame<SCLR>& A, Frame<SCLR>& b, SCLR tol, int max_iter)
+{
+  uint P = b.rows();
+
+  int iter = 0;
+
+  Block<SCLR> r(b);
+  gemm(r, A, x, 'N', 'N', (SCLR)-1.0, (SCLR)1.0);
+
+  Block<SCLR> d(r);
+
+  SCLR delta_new = dot(r, r);
+  // See note below...
+  // SCLR delta_0   = delta_new;
+  SCLR delta_old = 0;
+
+  Block<SCLR> q(P);
+  SCLR alpha;
+  SCLR beta;
+
+  //while(iter < max_iter && delta_new > tol*delta_0){
+  //The above condition is suggested by Shewchuk, but we want an absolute tolerance.
+  while(iter < max_iter && delta_new > tol){
+    gemm(q, A, d);
+    alpha = delta_new / dot(d, q);
+    axpy(alpha, d, x);
+
+    // You might want to discard this step.
+    if (iter % 50 == 0) {
+      r.clone(b);
+      gemm(r, A, x, 'N', 'N', (SCLR)-1.0, (SCLR)1.0);
+    }
+    else{
+      axpy((SCLR)-1.0 * alpha, q, r);
+    }
+
+    delta_old = delta_new;
+    delta_new = dot(r, r);
+
+    beta = delta_new / delta_old;
+    hsum(d, d, r, beta, 0.0);
+    //for(uint j = 0; j < P; j++)
+    //  d(j) = beta * d(j) + r(j);
+
+    iter++;
+  }
+
+  return iter;
+}
+
+//////////////////////////////////////////////////////////////////////
+		     // BLAS / LAPACK WRAPPERS //
+//////////////////////////////////////////////////////////////////////
+
+// Solve a symmetric, positive definite system of equations.
+// ax = b -> b := x;
+// int symsolve(MF a, Block<SCLR>& b, char uplo='L')
+template<typename SCLR>
+int symsolve(Frame<SCLR> a, Block<SCLR>& b, char uplo)
+{
+  // b.fill(0.0);
+  // for(uint i = 0; i < b.cols(); ++i)
+  //   b(i,i) = 1.0;
+
+  Block<SCLR> temp(a);
+  int info = posv(temp, b, uplo);
+
+  if (info) {
+    fprintf(stderr, "Problem with symsolve: ");
+    if (info < 0)
+      fprintf(stderr, "%i th argument had illegal value.\n", info);
+    if (info > 0)
+      fprintf(stderr, "leading minor order %i is not pos. def.\n", info);
+
+    throw std::runtime_error("potrf failed\n");
+  }
+
+  return info;
+}
+
+//------------------------------------------------------------------------------
+// int syminv(MF a, Matrix& ainv, char uplo='L')
+template<typename SCLR>
+int syminv(Frame<SCLR> a, Block<SCLR>& ainv, char uplo)
+{
+  ainv.resize(a.rows(), a.cols());
+  ainv.fill(0.0);
+  for(uint i = 0; i < ainv.cols(); ++i)
+     ainv(i,i) = 1.0;
+
+  return symsolve(a, ainv, uplo);
+}
+
+//------------------------------------------------------------------------------
+// Get the Cholesky decomposition of a matrix a.
+// int chol(Matrix& c, MF a, char uplo='L')
+template<typename SCLR>
+int chol(Block<SCLR>& c, Frame<SCLR> a, char uplo)
+{
+  c.clone(a);
+  int info = chol(c, uplo);
+
+  // FIX FIX Set other entries to zero.
+  // Do I want to have an option for letting a person not do this?
+
+  if (uplo=='L') {
+    for (uint j = 1; j < c.cols(); ++j)
+      for (uint i = 0; i < j; ++i)
+	c(i,j) = 0.0;
+  }
+  else {
+    for (uint j = 0; j < c.cols(); ++j)
+      for (uint i = j+1; i < c.cols(); ++i)
+	c(i,j) = 0.0;
+  }
+
+  if (info) {
+    fprintf(stderr, "Problem with chol: ");
+    if (info < 0)
+      fprintf(stderr, "%i th argument had illegal value.\n", info);
+    if (info > 0)
+      fprintf(stderr, "leading minor order %i is not pos. def.\n", info);
+
+    throw std::runtime_error("potrf failed\n");
+  }
+
+  return info;
+}
+
+//------------------------------------------------------------------------------
+template<typename SCLR>
+int symeigen(Block<SCLR>& evec, Block<SCLR>& eval, Frame<SCLR> symmat)
+{
+  sizecheck(symmat.rows()==symmat.cols());
+  int info = 0;
+  int N = symmat.rows();
+  
+  evec.clone(symmat);
+  eval.resize(N);
+
+  // int lwork  = 1 + 6 * N + 2*N*N;
+  // int liwork = 3 + 5*N;
+
+  int lwork = -1;
+  int liwork = -1;
+
+  std::vector<SCLR> work(1);
+  std::vector<int>    iwork(1);
+
+  rsyevd('V', 'U', N, &evec(0), N, &eval(0), &work[0], lwork, &iwork[0], liwork, &info);
+
+  lwork = (int) work[0];
+  liwork = (int) iwork[0];
+
+  work.resize(lwork);
+  iwork.resize(liwork);
+
+  rsyevd('V', 'U', N, &evec(0), N, &eval(0), &work[0], lwork, &iwork[0], liwork, &info);
+  
+  if (info != 0) {
+    fprintf(stderr, "problem in symeigen; info=%i.\n", info);
+    throw std::runtime_error("symeigen failed\n");
+  }
+
+  return info;
+}
+
+//------------------------------------------------------------------------------
+template<typename SCLR>
+int symsqrt(Block<SCLR>& rt, Frame<SCLR> symmat)
+{
+  int N = symmat.rows();
+
+  Block<SCLR> evec;
+  Block<SCLR> eval;
+  int info = symeigen(evec, eval, symmat);
+
+  Block<SCLR> d(N);
+  for(int i=0; i<N; i++) d(i) = sqrt(sqrt(eval(i)));
+
+  rt.resize(N, N);
+  prodonrow(evec, d);
+  gemm(rt, evec, evec, 'N', 'T');
+
+  return info;
+}
+
+//------------------------------------------------------------------------------
+template<typename SCLR>
+int syminvsqrt(Block<SCLR>& rt, Frame<SCLR> symmat)
+{
+  int N = symmat.rows();
+
+  Block<SCLR> evec;
+  Block<SCLR> eval;
+  int info = symeigen(evec, eval, symmat);
+
+  Block<SCLR> d(N);
+  for(int i=0; i<N; i++) d(i) = sqrt(sqrt(1.0 / eval(i)));
+
+  rt.resize(N, N);
+  prodonrow(evec, d);
+  gemm(rt, evec, evec, 'N', 'T');
+
+  return info;
+}
+
+//--------------------------------------------------------------------
+template<typename SCLR>
+int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
+{
+  // Always calculate a thinned U and a non-thinned V.  Pad out the
+  // singular values by 0.0 when needed.
+  Block<SCLR> A(X);
+
+  int m = A.rows();
+  int n = A.cols();
+
+  tV.resize(n,n);
+  S.resize(n); S.fill(0.0); // The singular values.
+  // Should be of size min(m,n), but I want to pad things out.
+  
+  if (m >= n) U.resize(m,n);
+  else U.resize(m,m);
+  int ldu = U.rows();
+
+  char jobu  = 'S';
+  char jobvt = 'A';
+
+  int maxmn = m > n ? m : n;
+  int minmn = m < n ? m : n;
+
+  vector<SCLR> work(1);
+  int lwork = -1;
+
+  int info;
+
+  // Workspace query.
+  rgesvd(jobu, jobvt, m, n, &A(0), m, &S(0), &U(0), ldu, &tV(0), n, &work[0], lwork, &info);
+  printf("lwork: %g\n", work[0]);
+  
+  // SVD.
+  lwork = (int)work[0];
+  lwork = lwork > 1 ? lwork : 5 * minmn + maxmn;
+
+  work.resize(lwork);
+  rgesvd(jobu, jobvt, m, n, &A(0), m, &S(0), &U(0), ldu, &tV(0), n, &work[0], lwork, &info);
+
+  if (info != 0) {
+    fprintf(stderr, "problem in svd; info=%i.\n", info);
+    throw std::runtime_error("svd failed\n");
+  }
+
+  return info;
+}
+
+//------------------------------------------------------------------------------
+// this = op(a) * op(b) + alpha * this.
+template<typename SCLR>
+void mult(Block<SCLR>& c, Frame<SCLR>& a, Frame<SCLR>& b, char ta, char tb, SCLR alpha, SCLR beta)
+{
+  uint opa_rows = ta=='T' ? a.cols() : a.rows();
+  uint opb_cols = tb=='T' ? b.rows() : b.cols();
+  c.resize(opa_rows, opb_cols, 1);
+  
+  gemm(c, a, b, ta, tb, alpha, beta);
+}
+
+//////////////////////////////////////////////////////////////////////
 	  // Hadamard operations by OVERLOADED OPERATORS //
 //////////////////////////////////////////////////////////////////////
 
@@ -545,143 +987,6 @@ BINARY(min, hmin) BINARY(max, hmax) BINARY(pow, pow)
 
 #undef BINARY
 
-//////////////////////////////////////////////////////////////////////
-			       // R //
-//////////////////////////////////////////////////////////////////////
-
-template<typename SCLR>
-Block<SCLR> seq(SCLR start, SCLR end, SCLR delta=1)
-{
-  double sign = end - start < 0 ? -1.0 : 1.0;
-  double new_delta = sign * fabs((double)delta);
-  double N_double = (end-start) / new_delta;
-  if (N_double < 0) fprintf(stderr, "Problem in seq: N_double < 0");
-  int N = floor(N_double) + 1;
-
-  Block<SCLR> a(N);
-  a(0) = start;
-  for (int i=1; i<N; i++)
-    a(i) = a(i-1) + (SCLR)delta;
-
-  return a;
-}
-
-template<typename SCLR>
-Block<SCLR> rowSums(Frame<SCLR> M)
-{
-  uint nc = M.cols();
-  uint nr = M.rows();
-  Block<SCLR> a(nr);
-
-  for (uint j=0; j < nc; j++)
-    for (uint i=0; i < nr; i++)
-      a(i) += M(i,j);
-
-  return a;
-}
-
-template<typename SCLR>
-Block<SCLR> rowMeans(Frame<SCLR> M)
-{
-  uint nc = M.cols();
-  uint nr = M.rows();
-  Block<SCLR> a(nr);
-
-  for (uint j=0; j < nc; j++)
-    for (uint i=0; i < nr; i++)
-      a(i) += M(i,j);
-
-  for (uint i=0; i<nr; i++)
-    a(i) = a(i) / nc;
-
-  return a;
-}
-
-template<typename SCLR>
-Block<SCLR> rowSums(Block<SCLR>& a, Frame<SCLR> M)
-{
-  uint nc = M.cols();
-  uint nr = M.rows();
-  a = M.col(0);
-
-  for (uint j=1; j < nc; j++)
-    for (uint i=0; i < nr; i++)
-      a(i) += M(i,j);
-
-  return a;
-}
-
-template<typename SCLR>
-Block<SCLR> colSums(Frame<SCLR> M)
-{
-  uint nc = M.cols();
-  uint nr = M.rows();
-  Block<SCLR> a(nc);
-
-  for (uint j=0; j < nc; j++)
-    for (uint i=0; i < nr; i++)
-      a(j) += M(i,j);
-
-  for (uint j=0; j<nc; j++)
-    a(j) = a(j) / nr;
-  
-  return a;
-}
-
-template<typename SCLR>
-Block<SCLR> colMeans(Frame<SCLR> M)
-{
-  uint nc = M.cols();
-  uint nr = M.rows();
-  Block<SCLR> a(nc);
-
-  for (uint j=0; j < nc; j++)
-    for (uint i=0; i < nr; i++)
-      a(j) += M(i,j) / nr;
-
-  return a;
-}
-
-template<typename SCLR>
-SCLR maxAll(Frame<SCLR> M)
-{
-  uint N = M.size();
-  SCLR mx = M(0);
-  for(uint i=1; i<N; i++) {
-    mx = M(i) > mx ? M(i) : mx;
-  }
-  return mx;
-}
-
-template<typename SCLR>
-SCLR minAll(Frame<SCLR> M)
-{
-  uint N = M.size();
-  SCLR mx = M(0);
-  for(uint i=1; i<N; i++) {
-    mx = M(i) < mx ? M(i) : mx;
-  }
-  return mx;
-}
-
-//////////////////////////////////////////////////////////////////////
-			   // transpose //
-//////////////////////////////////////////////////////////////////////
-
-// A = t(B)
-template<typename SCLR>
-void trans(Block<SCLR>& A, Block<SCLR>& B)
-{
-  uint T = B.mats();
-  uint R = B.rows();
-  uint C = B.cols();
-  if(A.rows() != C || A.cols() != R || A.mats() != T) A.resize(C, R, T);
-  for(uint t=0; t < T; ++t)
-    for(uint i=0; i < R; ++i)
-      for(uint j=0; j < C; ++j)
-	A(j,i,t) = B(i,j,t);
-}
-
 
 //////////////////////////////////////////////////////////////////////
 			  // END OF CLASS //
@@ -699,7 +1004,7 @@ void trans(Block<SCLR>& A, Block<SCLR>& B)
     int col;
     int stride;
 
-    double *begin;
+    SCLR *begin;
     double *end;
     int     offset;
 
