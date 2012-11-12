@@ -13,7 +13,7 @@ using std::vector;
 //using namespace Mine;
 
 // typedef float Real;
-typedef double Real;
+typedef float Real;
 
 int main(int argc, char** argv)
 {
@@ -83,23 +83,26 @@ int main(int argc, char** argv)
 
   cout << "AA:\n" << AA << "\n";
 
-  // CONJUGATE GRADIENT
-  Block<Real> b("N", 3);
+  gemm(AA, A, A, 'N', 'T');
+  cout << "AA:\n" << AA << "\n";
 
-  Block<Real> x(b);
-  symsolve(A, x);
+  // // CONJUGATE GRADIENT
+  // Block<Real> b("N", 3);
 
-  cout << "x:\n" << x;
+  // Block<Real> x(b);
+  // symsolve(A, x);
 
-  Block<Real> y(b);
-  try {
-  cout << "iter: " << cg(y, A, b, (Real)10e-8, 100) << "\n";
-  }
-  catch (std::exception& e) {
-    cout << e.what();
-  }
+  // cout << "x:\n" << x;
 
-  cout << "y:\n" << y;
+  // Block<Real> y(b);
+  // try {
+  // cout << "iter: " << cg(y, A, b, (Real)10e-8, 100) << "\n";
+  // }
+  // catch (std::exception& e) {
+  //   cout << e.what();
+  // }
+
+  // cout << "y:\n" << y;
 
   // SCAN
   // Matrix b(2,2);
