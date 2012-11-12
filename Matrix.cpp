@@ -10,7 +10,7 @@ void rgesvd(char jobu, char jobvt, int m, int n, double* a, int lda, double* s, 
 
 ////////////////////////////////////////////////////////////////////////////////
 
-#ifndef USE_R
+#ifndef DISABLE_SINGLE
 
 void rsyevd(char jobz, char uplo, int n, float* a, int lda, float* w, float* work, int lwork, int* iwork, int liwork, int* info)
 { return ssyevd_(&jobz, &uplo, &n, a, &lda, w, work, &lwork, iwork, &liwork, info); }

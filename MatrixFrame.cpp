@@ -61,7 +61,7 @@ void rpotrf(char uplo, int n, double* a, int lda, int& info)
 ////////////////////////////////////////////////////////////////////////////////
 // FLOAT
 
-#ifndef USE_R
+#ifndef DISABLE_SINGLE
 
 // It seems that there is a problem with using BLAS Level 1 with float.
 void raxpy(int n, float da, float* dx, int incx, float* dy, int incy)
