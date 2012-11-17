@@ -325,6 +325,7 @@ int chol(Frame<SCLR> a, char uplo='L');
   TYPE rdot(int n, TYPE* dx, int incx, TYPE* dy, int incy);		\
 									\
   void rgemm(char transa, char transb, int m, int n, int k, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb, TYPE beta, TYPE* c, int ldc); \
+  void rsyr2k(char uplo, char trans, int n, int k, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb, TYPE beta, TYPE* c, int ldc); \
   void rtrmm(char side, char uplo, char transa, char diag, int m, int n, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb); \
   void rtrsm(char side, char uplo, char transa, char diag, int m, int n, TYPE alpha, TYPE* a, int lda, TYPE* b, int ldb); \
   void rsyrk(char uplo, char trans, int n, int k, TYPE alpha, TYPE* a, int lda, TYPE beta, TYPE* c, int ldc); \
@@ -351,6 +352,8 @@ extern "C" {
   double ddot_(int* N, double* DX, int* INCX, double* DY, int* INCY);
 
   void dgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
+  void dsyr2k_(char* UPLO, char* TRANS, int* N, int* K, double* ALPHA, double* A, int* LDA, double* B, int* LDB, double* BETA, double* C, int* LDC);
+
   void dtrmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
   void dtrsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, double* ALPHA, double* A, int* LDA, double* B, int* LDB);
   void dsyrk_(char* UPLO, char* TRANS, int* N, int* K, double* ALPHA, double* A, int* LDA, double* BETA, double* C, int* LDC);
@@ -365,6 +368,8 @@ extern "C" {
   float sdot_(int* N, float* DX, int* INCX, float* DY, int* INCY);
 
   void sgemm_(char* TRANSA, char* TRANSB, int* M, int* N, int* K, float* ALPHA, float* A, int* LDA, float* B, int* LDB, float* BETA, float* C, int* LDC);
+  void ssyr2k_(char* UPLO, char* TRANS, int* N, int* K, float* ALPHA, float* A, int* LDA, float* B, int* LDB, float* BETA, float* C, int* LDC);
+
   void strmm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, float* ALPHA, float* A, int* LDA, float* B, int* LDB);
   void strsm_(char* SIDE, char* UPLO, char* TRANSA, char* DIAG, int* M, int* N, float* ALPHA, float* A, int* LDA, float* B, int* LDB);
   void ssyrk_(char* UPLO, char* TRANS, int* N, int* K, float* ALPHA, float* A, int* LDA, float* BETA, float* C, int* LDC);

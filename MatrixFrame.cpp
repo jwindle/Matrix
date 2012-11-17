@@ -38,16 +38,20 @@ double rdot(int n, double* dx, int incx, double* dy, int incy)
 void rgemm(char transa, char transb, int m, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc)
 { dgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc); }
 
+void rsyr2k(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double* b, int ldb, double beta, double* c, int ldc)
+{ dsyr2k_(&uplo, &trans, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc); }
+
 void rtrmm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb)
 { dtrmm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
 
 void rtrsm(char side, char uplo, char transa, char diag, int m, int n, double alpha, double* a, int lda, double* b, int ldb)
 { dtrsm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
 
-//------------------------------------------------------------------------------
-
+// only overwrites uplo portion of c!!!
 void rsyrk(char uplo, char trans, int n, int k, double alpha, double* a, int lda, double beta, double* c, int ldc)
-{ return dsyrk_(&uplo, &trans, &n, &k, &alpha, a, &lda, &beta, c, &ldc); }
+{ dsyrk_(&uplo, &trans, &n, &k, &alpha, a, &lda, &beta, c, &ldc); }
+
+//------------------------------------------------------------------------------
 
 void rgesv(int n, int nrhs, double* a, int lda, int* ipiv, double* b, int ldb, int& info)
 { dgesv_(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info); }
@@ -80,16 +84,19 @@ void raxpy(int n, float da, float* dx, int incx, float* dy, int incy)
 void rgemm(char transa, char transb, int m, int n, int k, float alpha, float* a, int lda, float* b, int ldb, float beta, float* c, int ldc)
 { sgemm_(&transa, &transb, &m, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc); }
 
+void rsyr2k(char uplo, char trans, int n, int k, float alpha, float* a, int lda, float* b, int ldb, float beta, float* c, int ldc)
+{ ssyr2k_(&uplo, &trans, &n, &k, &alpha, a, &lda, b, &ldb, &beta, c, &ldc); }
+
 void rtrmm(char side, char uplo, char transa, char diag, int m, int n, float alpha, float* a, int lda, float* b, int ldb)
 { strmm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
 
 void rtrsm(char side, char uplo, char transa, char diag, int m, int n, float alpha, float* a, int lda, float* b, int ldb)
 { strsm_(&side, &uplo, &transa, &diag, &m, &n, &alpha, a, &lda, b, &ldb); }
 
-//------------------------------------------------------------------------------
-
 void rsyrk(char uplo, char trans, int n, int k, float alpha, float* a, int lda, float beta, float* c, int ldc)
 { return ssyrk_(&uplo, &trans, &n, &k, &alpha, a, &lda, &beta, c, &ldc); }
+
+//------------------------------------------------------------------------------
 
 void rgesv(int n, int nrhs, float* a, int lda, int* ipiv, float* b, int ldb, int& info)
 { sgesv_(&n, &nrhs, a, &lda, ipiv, b, &ldb, &info); }
