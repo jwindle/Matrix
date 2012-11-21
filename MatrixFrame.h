@@ -293,8 +293,8 @@ void trmm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', c
 template<typename SCLR>
 void trsm(Frame<SCLR> a, Frame<SCLR> b, char uplo, char side='L', char ta='N', char diag='N', SCLR alpha=1.0);
 
-// c = alpha a' a + beta c, ta='N'
-// c = alpha a a' + beta c, ta='T'
+// c = alpha a' a + beta c, ta='T'
+// c = alpha a a' + beta c, ta='N'
 template<typename SCLR>
 void syrk(Frame<SCLR> c, Frame<SCLR> a, char ta='N', SCLR alpha=1.0, SCLR beta=0.0);
 
