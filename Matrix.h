@@ -191,14 +191,17 @@ int symsqrt(Block<SCLR>& rt, Frame<SCLR> symmat);
 template<typename SCLR>
 int syminvsqrt(Block<SCLR>& rt, Frame<SCLR> symmat);
 template<typename SCLR>
-int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X);
+int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X);
+template<typename SCLR>
+int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jobz='A', bool pad_S=false);
 
 //--------------------------------------------------------------------
 
 #define BLASDEC(SCLR)							\
 									\
   void rsyevd(char jobz, char uplo, int n, SCLR* a, int lda, SCLR* w, SCLR* work, int lwork, int* iwork, int liwork, int* info); \
-  void rgesvd(char jobu, char jobvt, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR*work, int lwork, int* info);
+  void rgesvd(char jobu, char jobvt, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR*work, int lwork, int* info); \
+  void rgesdd(char jobz, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR* work, int lwork, int* iwork, int* info); 
 
 BLASDEC(double)
 BLASDEC(float)
@@ -213,11 +216,13 @@ extern "C" {
 
   void dsyevd_(char* JOBZ, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
+  void dgesdd_(char* JOBZ, int* M, int* M, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO); 
 
   // FLOAT
 
   void ssyevd_(char* JOBZ, char* UPLO, int* N, float* A, int* LDA, float* W, float* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void sgesvd_(char* JOBU, char* JOBVT, int* M, int* N, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* INFO);
+  void sgesdd_(char* JOBZ, int* M, int* M, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* IWORK, int* INFO);
 
 }
 
@@ -789,7 +794,7 @@ int syminvsqrt(Block<SCLR>& rt, Frame<SCLR> symmat)
 
 //--------------------------------------------------------------------
 template<typename SCLR>
-int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
+int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
 {
   // Always calculate a thinned U and a non-thinned V.  Pad out the
   // singular values by 0.0 when needed.
@@ -819,7 +824,7 @@ int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
 
   // Workspace query.
   rgesvd(jobu, jobvt, m, n, &A(0), m, &S(0), &U(0), ldu, &tV(0), n, &work[0], lwork, &info);
-  printf("lwork: %g\n", work[0]);
+  // printf("lwork: %g\n", work[0]);
   
   // SVD.
   lwork = (int)work[0];
@@ -827,6 +832,67 @@ int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
 
   work.resize(lwork);
   rgesvd(jobu, jobvt, m, n, &A(0), m, &S(0), &U(0), ldu, &tV(0), n, &work[0], lwork, &info);
+
+  if (info != 0) {
+    fprintf(stderr, "problem in svd; info=%i.\n", info);
+    throw std::runtime_error("svd failed\n");
+  }
+
+  return info;
+}
+
+//--------------------------------------------------------------------
+template<typename SCLR>
+int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jobz, bool pad_S)
+{
+  
+  // Sigma is M x N.
+  // U is M x M.
+  // V is N x N.
+  // Routine returns V^T.
+
+  Block<SCLR> A(X);
+
+  int m = A.rows();
+  int n = A.cols();
+
+  int maxmn = m > n ? m : n;
+  int minmn = m < n ? m : n;
+
+  // Dim
+  if (jobz=='A') {
+    U.resize(m, m);
+    tV.resize(n, n);
+  }
+  else {
+    // if (jobz=='S')
+    U.resize(m, minmn);
+    tV.resize(minmn, n);
+  }
+
+  int lenS = pad_S ? maxmn : minmn;
+  S.resize(lenS); S.fill(0.0); // The singular values.
+
+  int lda  = A.rows();
+  int ldu  = U.rows();
+  int ldvt = tV.rows();
+
+  vector<int> iwork(8 * minmn);
+  vector<SCLR> work(1);
+  int lwork = -1;
+
+  int info;
+
+  // Workspace query.
+  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info); 
+  // printf("lwork: %g\n", work[0]);
+  
+  // SVD.
+  lwork = (int)work[0];
+  lwork = lwork > 1 ? lwork : 3 * minmn + max(maxmn, 4 * minmn * minmn + 3*minmn + maxmn) ;
+
+  work.resize(lwork);
+  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info); 
 
   if (info != 0) {
     fprintf(stderr, "problem in svd; info=%i.\n", info);
