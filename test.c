@@ -12,65 +12,97 @@ using std::vector;
 
 //using namespace Mine;
 
-// typedef float Real;
-typedef float Real;
+// typedef float TReal;
+typedef double TReal;
 
-int main(int argc, char** argv)
+//------------------------------------------------------------------------------
+void test_svd2(Block<TReal>& A) {
+
+  // SVD
+  // A << " 4 3 0 "
+  //      " 0 4 1 "
+  //      " 0 1 4 ";
+
+  Block<TReal> U;
+  Block<TReal> S;
+  Block<TReal> tV;
+
+  svd2(U, S, tV, A);
+  cout << "A:\n" << A;
+  cout << "U:\n" << U;
+  cout << "S:\n" << S;
+  cout << "tV:\n" << tV;
+
+}
+
+//------------------------------------------------------------------------------
+void test_svd(Block<TReal>& A, char jobz='A', bool padS = false) {
+
+  // SVD
+  // A << " 4 3 0 "
+  //      " 0 4 1 "
+  //      " 0 1 4 ";
+
+  Block<TReal> U;
+  Block<TReal> S;
+  Block<TReal> tV;
+
+  svd(U, S, tV, A, jobz, padS);
+  cout << "A:\n" << A;
+  cout << "U:\n" << U;
+  cout << "S:\n" << S;
+  cout << "tV:\n" << tV;
+
+}
+
+//------------------------------------------------------------------------------
+void test_cg(Block<TReal>& A)
 {
 
-  // vector<double> a(100);
-  // Frame<double> aframe(&a[0], 10, 10);
-  // vector<double> b(100);
-  // Frame<double> bframe(&b[0], 10, 10);
+  // // CONJUGATE GRADIENT
+  Block<TReal> b("N", 3);
 
-  // operator+=(aframe, bframe);
+  Block<TReal> x(b);
+  symsolve(A, x);
 
-  // Matrix A("I", 3);
-  // cout << A.write("A.mat", true) << "\n";
+  cout << "x:\n" << x;
 
-  // Matrix A;
-  // A.read("A.mat", true);
-  // cout << A;
+  Block<TReal> y(b);
+  try {
+  cout << "iter: " << cg(y, A, b, (TReal)10e-8, 100) << "\n";
+  }
+  catch (std::exception& e) {
+    cout << e.what();
+  }
 
-  Block<Real> A(3, 3);
-  // string av = 
-  //   " 1 2 3 " 
-  //   " 4 5 6 " 
-  //   " 7 8 9 " ;
-  
-  // stringstream ss(av);
+  cout << "y:\n" << y;
 
-  // A << " 1 2 3 "
-  //      " 4 5 6 "
-  //      " 7 8 9 " ;
+}
 
-  // cout << A;
+//------------------------------------------------------------------------------
+void test_block_constructor(){
 
-  // Matrix B = 5 * Matrix("I", 3);
+  Block<int> C("W", 3);
+  cout << "C:\n" << C << "\n";
 
-  // Matrix C(0.0, B);
+}
 
-  // cout << B ;
+//------------------------------------------------------------------------------
+void test_read_write() {
 
-  // cout << hmin(B, A);
+  Matrix A("I", 3);
+  cout << A.write("A.mat", true) << "\n";
 
-  // MatrixFrame C(&A(0), 3, 1);
-  // Matrix B("I", 2);
-  // B = (A + A) + 1 + C;
-  // cout << B;
+  A.resize(1);
+  A.read("A.mat", true);
+  cout << A;
 
-  // Matrix B(3, 1);
-  // string b = " 1 2 3 ";
-  // B.readstring(b);
-  // A -= B;
-  // cout << A + A;
+}
 
-  //   Matrix rows(2); rows << "0 1";
-  //   Matrix cols(2); cols << "1 2";
-  //   Matrix B(2,2);
-  //   B.copy(A, rows, cols);
-  //   cout << "A:\n" << A << "\n";
-  //   cout << "B:\n" << B << "\n";
+//------------------------------------------------------------------------------
+void test_syrk() {
+
+  Block<TReal> A(3,3);
 
   A << " 4 0 0 "
        " 0 4 1 "
@@ -78,74 +110,121 @@ int main(int argc, char** argv)
 
   cout << "A:\n" << A << "\n";
   
-  Block<Real> AA(3, 3); AA.fill(1.0);
-  syrk(AA, A, 'N', (Real)1.0, (Real)0.0);
+  Block<TReal> AA(3, 3); AA.fill(1.0);
+  syrk(AA, A, 'N', (TReal)1.0, (TReal)0.0);
 
   cout << "AA:\n" << AA << "\n";
 
   gemm(AA, A, A, 'N', 'T');
   cout << "AA:\n" << AA << "\n";
 
-  // // CONJUGATE GRADIENT
-  // Block<Real> b("N", 3);
+}
 
-  // Block<Real> x(b);
-  // symsolve(A, x);
+//------------------------------------------------------------------------------
+void test_symeigen(Block<TReal>& A) {
 
-  // cout << "x:\n" << x;
+  // EIGENVECTOR DECOMP OF SYM MATRIX
+  Block<TReal> evec;
+  Block<TReal> eval;
+  Block<TReal> rt;
+  Block<TReal> irt;
 
-  // Block<Real> y(b);
-  // try {
-  // cout << "iter: " << cg(y, A, b, (Real)10e-8, 100) << "\n";
-  // }
-  // catch (std::exception& e) {
-  //   cout << e.what();
-  // }
+  symeigen(evec, eval, A);
+  symsqrt(rt, A);
+  syminvsqrt(irt, A);
 
-  // cout << "y:\n" << y;
+  cout << "A:\n" << A;
+  cout << "U:\n" << evec;
+  cout << "D:\n" << eval;
 
+  cout << "rt:\n" << rt;
+  cout << "irt:\n" << irt;
+
+}
+
+//------------------------------------------------------------------------------
+void test_scan() {
   // SCAN
-  // Matrix b(2,2);
-  // b.scan("b.dat");
-  // cout << "b:\n" << b;
+  Matrix b(2,2);
+  b.scan("b.dat");
+  cout << "b:\n" << b;
+}
 
-  // // EIGENVECTOR DECOMP OF SYM MATRIX
-  // Matrix evec;
-  // Matrix eval;
-  // Matrix rt;
-  // Matrix irt;
+//------------------------------------------------------------------------------
+void test_max_and_min(Block<TReal>& A) {
 
-  // symeigen(evec, eval, A);
-  // symsqrt(rt, A);
-  // syminvsqrt(irt, A);
+  cout << "Max: " << maxAll(A) << "\n";
+  cout << "Min: " << minAll(A) << "\n";
 
-  // cout << "A:\n" << A;
-  // cout << "U:\n" << evec;
-  // cout << "D:\n" << eval;
+}
 
-  // cout << "rt:\n" << rt;
-  // cout << "irt:\n" << irt;
+//------------------------------------------------------------------------------
+void test_op() {
 
-  // cout << "Max: " << maxAll(A) << "\n";
-  // cout << "Min: " << minAll(A) << "\n";
+  Block<TReal> A(3, 3);
 
-  // // SVD
-  // A << " 4 3 0 "
-  //      " 0 4 1 "
-  //      " 0 1 4 ";
+  A << " 1 2 3 "
+       " 4 5 6 "
+       " 7 8 9 " ;
 
-  // Matrix U;
-  // Matrix S;
-  // Matrix tV;
+  cout << A;
 
-  // svd(U, S, tV, A);
-  // cout << "A:\n" << A;
-  // cout << "U:\n" << U;
-  // cout << "S:\n" << S;
-  // cout << "tV:\n" << tV;
+  Block<TReal> Id("I", 3);
+  Block<TReal> B = 5.0 * Id;
 
-  //Block<int> C("W", 3);
-  //cout << "C:\n" << C << "\n";
+  Block<TReal> C(0.0, B);
+
+  cout << B ;
+
+  cout << hmin(B, A);
+
+  Frame<TReal> AMF(&A(0), 3, 1);
+  B = Block<TReal>("I", 2);
+  B = (A + A) + (TReal)1.0 + AMF;
+  cout << B;
+
+}
+
+//------------------------------------------------------------------------------  
+void test_copy() {
+
+  Block<TReal> A(3, 3);
+
+  A << " 1 2 3 "
+       " 4 5 6 "
+       " 7 8 9 " ;
+
+  Block<TReal> rows(2); rows << "0 1";
+  Block<TReal> cols(2); cols << "1 2";
+  Block<TReal> B(2,2);
+  B.copy(A, rows, cols);
+  cout << "A:\n" << A << "\n";
+  cout << "B:\n" << B << "\n";
+
+}
+  
+////////////////////////////////////////////////////////////////////////////////
+
+int main(int argc, char** argv)
+{
+
+  // Test SVD;
+  Block<TReal> A(4,3);
+
+  A << " 4 3 0 "
+       " 0 4 1 "
+       " 0 1 4 "
+       " 3 1 1 ";
+
+  test_svd(A, 'A');
+  test_svd(A, 'S');
+  test_svd2(A);
+
+  A.resize(3,4);
+
+  test_svd(A, 'A', true);
+  test_svd(A, 'S', true);
+  test_svd2(A);
 
   return 0;
 
