@@ -216,13 +216,13 @@ extern "C" {
 
   void dsyevd_(char* JOBZ, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
-  void dgesdd_(char* JOBZ, int* M, int* M, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO); 
+  void dgesdd_(char* JOBZ, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO); 
 
   // FLOAT
 
   void ssyevd_(char* JOBZ, char* UPLO, int* N, float* A, int* LDA, float* W, float* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void sgesvd_(char* JOBU, char* JOBVT, int* M, int* N, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* INFO);
-  void sgesdd_(char* JOBZ, int* M, int* M, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* IWORK, int* INFO);
+  void sgesdd_(char* JOBZ, int* M, int* N, float* A, int* LDA, float* S, float* U, int* LDU, float* VT, int* LDVT, float* WORK, int* LWORK, int* IWORK, int* INFO);
 
 }
 
@@ -659,7 +659,9 @@ int symsolve(Frame<SCLR> a, Block<SCLR>& b, char uplo)
     if (info > 0)
       fprintf(stderr, "leading minor order %i is not pos. def.\n", info);
 
+    #ifndef NTHROW
     throw std::runtime_error("potrf failed\n");
+    #endif
   }
 
   return info;
@@ -707,8 +709,10 @@ int chol(Block<SCLR>& c, Frame<SCLR> a, char uplo)
       fprintf(stderr, "%i th argument had illegal value.\n", info);
     if (info > 0)
       fprintf(stderr, "leading minor order %i is not pos. def.\n", info);
-
+    
+    #ifndef NTHROW
     throw std::runtime_error("potrf failed\n");
+    #endif
   }
 
   return info;
@@ -746,7 +750,9 @@ int symeigen(Block<SCLR>& evec, Block<SCLR>& eval, Frame<SCLR> symmat)
   
   if (info != 0) {
     fprintf(stderr, "problem in symeigen; info=%i.\n", info);
+    #ifndef NTHROW
     throw std::runtime_error("symeigen failed\n");
+    #endif
   }
 
   return info;
@@ -835,7 +841,9 @@ int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
 
   if (info != 0) {
     fprintf(stderr, "problem in svd; info=%i.\n", info);
+    #ifndef NTHROW
     throw std::runtime_error("svd failed\n");
+    #endif
   }
 
   return info;
@@ -896,7 +904,9 @@ int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jo
 
   if (info != 0) {
     fprintf(stderr, "problem in svd; info=%i.\n", info);
+    #ifndef NTHROW
     throw std::runtime_error("svd failed\n");
+    #endif
   }
 
   return info;

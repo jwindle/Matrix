@@ -1002,7 +1002,9 @@ int posv(Frame<SCLR> a, Frame<SCLR> b, char uplo)
 
   if (info != 0) {
     printf("Error in posv: info = %i\n", info);
+    #ifndef NTHROW
     throw std::runtime_error("aborted in posv\n");
+    #endif
   }
 
   return info;
