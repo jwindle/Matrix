@@ -117,11 +117,11 @@ class Block : public Frame<SCLR>
   // Iterators...
   typename vector<SCLR>::iterator begin()
   { return v.begin(); }
-  typename vector<SCLR>::iterator end()   
+  typename vector<SCLR>::iterator end()
   { return v.end(); }
-  typename vector<SCLR>::const_iterator begin() const 
+  typename vector<SCLR>::const_iterator begin() const
   { return v.begin(); }
-  typename vector<SCLR>::const_iterator end() const 
+  typename vector<SCLR>::const_iterator end() const
   { return v.end(); }
 
   // Utility functions.
@@ -138,6 +138,8 @@ class Block : public Frame<SCLR>
   // Read //
   uint read(      istream&  is, bool header=0, bool binary=0);
   uint readstring(const string& s, bool header=0);
+  uint readNatural(istream& is);
+  uint readNatural(const string& file);
   #ifndef DISABLE_FIO
   uint read(const string& file, bool header=0, bool binary=0);
   #endif
@@ -145,7 +147,7 @@ class Block : public Frame<SCLR>
   // Writing is taken care of in Frame<SCLR>.h.
   // Block operations are taken care of in Frame<SCLR>.h
 
-  
+
 }; // Block
 
 //////////////////////////////////////////////////////////////////////
@@ -168,7 +170,7 @@ typedef Block<double> Matrices;
 			  // DECLARATIONS //
 //////////////////////////////////////////////////////////////////////
 
-template<typename SCLR> 
+template<typename SCLR>
 void mult(Block<SCLR>& c, Frame<SCLR>& a, Frame<SCLR>& b, char ta='N', char tb='N', SCLR alpha=1.0, SCLR beta=0.0);
 
 template<typename SCLR>
@@ -201,7 +203,7 @@ int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jo
 									\
   void rsyevd(char jobz, char uplo, int n, SCLR* a, int lda, SCLR* w, SCLR* work, int lwork, int* iwork, int liwork, int* info); \
   void rgesvd(char jobu, char jobvt, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR*work, int lwork, int* info); \
-  void rgesdd(char jobz, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR* work, int lwork, int* iwork, int* info); 
+  void rgesdd(char jobz, int m, int n, SCLR* a, int lda, SCLR* s, SCLR* u, int ldu, SCLR* vt, int ldvt, SCLR* work, int lwork, int* iwork, int* info);
 
 BLASDEC(double)
 BLASDEC(float)
@@ -216,7 +218,7 @@ extern "C" {
 
   void dsyevd_(char* JOBZ, char* UPLO, int* N, double* A, int* LDA, double* W, double* WORK, int* LWORK, int* IWORK, int* LIWORK, int* INFO);
   void dgesvd_(char* JOBU, char* JOBVT, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* INFO);
-  void dgesdd_(char* JOBZ, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO); 
+  void dgesdd_(char* JOBZ, int* M, int* N, double* A, int* LDA, double* S, double* U, int* LDU, double* VT, int* LDVT, double* WORK, int* LWORK, int* IWORK, int* INFO);
 
   // FLOAT
 
@@ -291,21 +293,21 @@ void Block<SCLR>::clone(const Frame<SCLR>& M)
   Frame<SCLR>::copy(M);
 } // copy
 
-template<typename SCLR> template<typename IDX> 
+template<typename SCLR> template<typename IDX>
 void Block<SCLR>::clone(const Frame<SCLR>& M, const Frame<IDX>& rs, const Frame<IDX>& cs)
 {
   resize(rs.area(), cs.area(), 1);
   Frame<SCLR>::copy(M, rs, cs);
 }
 
-template<typename SCLR> template<typename IDX> 
+template<typename SCLR> template<typename IDX>
 void Block<SCLR>::clone(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c)
 {
   resize(rs.area(), 1);
   Frame<SCLR>::copy(M, rs, c);
 }
 
-template<typename SCLR> template<typename IDX> 
+template<typename SCLR> template<typename IDX>
 void Block<SCLR>::clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs)
 {
   resize(1, cs.area());
@@ -370,13 +372,15 @@ Block<SCLR>& Block<SCLR>::operator= (const Frame<SCLR> &M)
 // set to true these values are read from the stream and used to set
 // the dimensions of this matrix.
 
-template<typename SCLR> 
+template<typename SCLR>
 uint Block<SCLR>::read( std::istream& is, bool header, bool binary)
 {
   // Tell us if something is wrong.
   if (!is || is.eof())  return 0;
 
   uint n = 0; // The number of items read.
+
+  fprintf(stderr, "Warning: data read in column wise by line.\n");
 
   // Read binary.
   if(binary){
@@ -422,6 +426,89 @@ uint Block<SCLR>::readstring(const string& s, bool header)
   stringstream ss(s);
   return read(ss, header, false);
 } // readstring
+
+template<typename SCLR>
+uint Block<SCLR>::readNatural(istream& is)
+{
+  uint totalread = 0;
+  uint numrows   = 0;
+  uint nummat    = 0;
+
+  vector<SCLR> space(0);
+
+  char prev = '1';
+  char curr;
+
+  while (!is.eof()) {
+    stringstream ss;
+    string line;
+
+    getline(is, line);
+    ss << line;
+
+    string word;
+    ss >> word;
+
+    if (word=="") {
+      // skip: nothing on line
+    }
+    else {
+      // std::cout << line << "\n";
+
+      numrows++;
+
+      try {
+	space.push_back( atof(word.c_str()) );
+	totalread++;
+
+	while ( !ss.eof() ) {
+	  ss >> word;
+	  space.push_back( atof(word.c_str()) );
+	  totalread++;
+	}
+      }
+      catch(std::exception& e){
+	std::cout << e.what();
+      }
+    }
+
+  }
+
+  int numcols = totalread / numrows;
+  if (totalread % numrows != 0) {
+    fprintf(stderr, "Number of rows read does not evenly divide number of items read.\n");
+    numcols++;
+  }
+
+  // std::cout << "Size: " << v.size() << "\n";
+  // fprintf(stderr, "Read: %d rows %d total.  Assume %d cols.  Space length: %d.\n", numrows, totalread, numcols, (uint)v.size());
+
+  resize(numrows, numcols, 1);
+
+  int iter = 0;
+  for (uint j=0; j<numcols; j++) {
+    for (uint i=0; i<numrows; i++) {
+      // std::cout << " (" << CDX(j,i,numcols) << ") ";
+      double val = 0;
+      int idx = CDX(j,i,numcols);
+      if (idx < totalread) val = space[idx];
+      this->operator()(i,j,0) = val;
+    }
+  }
+
+}
+
+template<typename SCLR>
+uint Block<SCLR>::readNatural(const string& file)
+{
+  std::ifstream ifs(file.c_str());
+  if(!ifs){
+    fprintf(stderr, "Cannot read file %s.\n", file.c_str());
+    return 0;
+  }
+  return readNatural(ifs);
+}
+
 
 //////////////////////////////////////////////////////////////////////
 		      // END OF CLASS METHODS //
@@ -517,7 +604,7 @@ Block<SCLR> colSums(Frame<SCLR> M)
 
   for (uint j=0; j<nc; j++)
     a(j) = a(j) / nr;
-  
+
   return a;
 }
 
@@ -709,7 +796,7 @@ int chol(Block<SCLR>& c, Frame<SCLR> a, char uplo)
       fprintf(stderr, "%i th argument had illegal value.\n", info);
     if (info > 0)
       fprintf(stderr, "leading minor order %i is not pos. def.\n", info);
-    
+
     #ifndef NTHROW
     throw std::runtime_error("potrf failed\n");
     #endif
@@ -725,7 +812,7 @@ int symeigen(Block<SCLR>& evec, Block<SCLR>& eval, Frame<SCLR> symmat)
   sizecheck(symmat.rows()==symmat.cols());
   int info = 0;
   int N = symmat.rows();
-  
+
   evec.clone(symmat);
   eval.resize(N);
 
@@ -747,7 +834,7 @@ int symeigen(Block<SCLR>& evec, Block<SCLR>& eval, Frame<SCLR> symmat)
   iwork.resize(liwork);
 
   rsyevd('V', 'U', N, &evec(0), N, &eval(0), &work[0], lwork, &iwork[0], liwork, &info);
-  
+
   if (info != 0) {
     fprintf(stderr, "problem in symeigen; info=%i.\n", info);
     #ifndef NTHROW
@@ -812,7 +899,7 @@ int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
   tV.resize(n,n);
   S.resize(n); S.fill(0.0); // The singular values.
   // Should be of size min(m,n), but I want to pad things out.
-  
+
   if (m >= n) U.resize(m,n);
   else U.resize(m,m);
   int ldu = U.rows();
@@ -831,7 +918,7 @@ int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
   // Workspace query.
   rgesvd(jobu, jobvt, m, n, &A(0), m, &S(0), &U(0), ldu, &tV(0), n, &work[0], lwork, &info);
   // printf("lwork: %g\n", work[0]);
-  
+
   // SVD.
   lwork = (int)work[0];
   lwork = lwork > 1 ? lwork : 5 * minmn + maxmn;
@@ -853,7 +940,7 @@ int svd2(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X)
 template<typename SCLR>
 int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jobz, bool pad_S)
 {
-  
+
   // Sigma is M x N.
   // U is M x M.
   // V is N x N.
@@ -892,15 +979,15 @@ int svd(Block<SCLR>& U, Block<SCLR>& S, Block<SCLR>& tV, Block<SCLR>& X, char jo
   int info;
 
   // Workspace query.
-  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info); 
+  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info);
   // printf("lwork: %g\n", work[0]);
-  
+
   // SVD.
   lwork = (int)work[0];
   lwork = lwork > 1 ? lwork : 3 * minmn + max(maxmn, 4 * minmn * minmn + 3*minmn + maxmn) ;
 
   work.resize(lwork);
-  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info); 
+  rgesdd(jobz, m, n, &A(0), lda, &S(0), &U(0), ldu, &tV(0), ldvt, &work[0], lwork, &iwork[0], &info);
 
   if (info != 0) {
     fprintf(stderr, "problem in svd; info=%i.\n", info);
@@ -920,7 +1007,7 @@ void mult(Block<SCLR>& c, Frame<SCLR>& a, Frame<SCLR>& b, char ta, char tb, SCLR
   uint opa_rows = ta=='T' ? a.cols() : a.rows();
   uint opb_cols = tb=='T' ? b.rows() : b.cols();
   c.resize(opa_rows, opb_cols, 1);
-  
+
   gemm(c, a, b, ta, tb, alpha, beta);
 }
 

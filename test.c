@@ -100,6 +100,28 @@ void test_read_write() {
 }
 
 //------------------------------------------------------------------------------
+void test_readNatural() {
+  Matrix A;
+
+  A.readNatural("Nat1.mat");
+  A.out(cout, true) << "\n";
+
+  A.readNatural("Nat2.mat");
+  A.out(cout, true) << "\n";
+}
+
+//------------------------------------------------------------------------------
+void test_out(Block<TReal>& A) {
+  A.out(cout, true);
+
+  cout << "\n";
+
+  A.out(cout, false);
+
+  cout << "\n";
+}
+
+//------------------------------------------------------------------------------
 void test_syrk() {
 
   Block<TReal> A(3,3);
@@ -109,7 +131,7 @@ void test_syrk() {
        " 0 1 4 ";
 
   cout << "A:\n" << A << "\n";
-  
+
   Block<TReal> AA(3, 3); AA.fill(1.0);
   syrk(AA, A, 'N', (TReal)1.0, (TReal)0.0);
 
@@ -185,7 +207,7 @@ void test_op() {
 
 }
 
-//------------------------------------------------------------------------------  
+//------------------------------------------------------------------------------
 void test_copy() {
 
   Block<TReal> A(3, 3);
@@ -202,29 +224,34 @@ void test_copy() {
   cout << "B:\n" << B << "\n";
 
 }
-  
+
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
 {
 
   // Test SVD;
-  Block<TReal> A(4,3);
+  Block<TReal> A(3,4);
 
+  // Read in transposed.
   A << " 4 3 0 "
        " 0 4 1 "
        " 0 1 4 "
        " 3 1 1 ";
 
-  test_svd(A, 'A');
-  test_svd(A, 'S');
-  test_svd2(A);
+  // test_svd(A, 'A');
+  // test_svd(A, 'S');
+  // test_svd2(A);
 
-  A.resize(3,4);
+  // A.resize(3,4);
 
-  test_svd(A, 'A', true);
-  test_svd(A, 'S', true);
-  test_svd2(A);
+  // test_svd(A, 'A', true);
+  // test_svd(A, 'S', true);
+  // test_svd2(A);
+
+  test_readNatural();
+
+  // test_out(A);
 
   return 0;
 

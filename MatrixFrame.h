@@ -56,6 +56,11 @@ using std::ostream;
 typedef unsigned int uint;
 #endif
 
+#ifndef CDX
+#define CDX(i,j,ld)  ((i)+(j)*(ld))
+// Column major indexing for sq matrix starting at 0 to array starting at 0.
+#endif
+
 //////////////////////////////////////////////////////////////////////
                           // MatrixFrame //
 //////////////////////////////////////////////////////////////////////
@@ -144,18 +149,18 @@ class Frame
 
   // Returns the (r,c) element of matrix.
   SCLR& operator()(uint r, uint c)
-    { 
+    {
     #ifndef NDEBUG
-        idxcheck(allow(r, c)); 
-    #endif      
-        return p[c * nr + r]; 
+        idxcheck(allow(r, c));
+    #endif
+        return p[c * nr + r];
     }
   const SCLR& operator()(uint r, uint c) const
-    { 
+    {
     #ifndef NDEBUG
-        idxcheck(allow(r, c)); 
+        idxcheck(allow(r, c));
     #endif
-        return p[c * nr + r]; 
+        return p[c * nr + r];
     }
 
   // Array of Matrix Access
@@ -163,38 +168,38 @@ class Frame
   // Returns the lth element of array of matrices.
   // I debate whether this is confusing notation.
   const SCLR& operator()(uint l) const
-    { 
+    {
     #ifndef NDEBUG
-        idxcheck(l < nr*nc*nm);    
-    #endif    
-        return p[l]; 
-    }
-    
-  SCLR& operator()(uint l)
-    { 
-    #ifndef NDEBUG
-        idxcheck(l < nr*nc*nm);   
+        idxcheck(l < nr*nc*nm);
     #endif
-        return p[l]; 
+        return p[l];
+    }
+
+  SCLR& operator()(uint l)
+    {
+    #ifndef NDEBUG
+        idxcheck(l < nr*nc*nm);
+    #endif
+        return p[l];
     }
 
   // Returns the (r,c) element of matrix[t].
   SCLR& operator()(uint r, uint c, uint t)
-    {   
-    #ifndef NDEBUG  
-        idxcheck(indexok(t) && allow(r,c)); 
-    #endif
-        return p[t * nr*nc + c * nr + r]; 
-    }
-    
-  const SCLR& operator()(uint r, uint c, uint t) const
-    { 
+    {
     #ifndef NDEBUG
-        idxcheck(indexok(t) && allow(r,c)); 
+        idxcheck(indexok(t) && allow(r,c));
     #endif
-        return p[t * nr*nc + c * nr + r]; 
-    }    
-    
+        return p[t * nr*nc + c * nr + r];
+    }
+
+  const SCLR& operator()(uint r, uint c, uint t) const
+    {
+    #ifndef NDEBUG
+        idxcheck(indexok(t) && allow(r,c));
+    #endif
+        return p[t * nr*nc + c * nr + r];
+    }
+
   SCLR& get(uint r, uint c=0, uint t=0)
   { idxcheck(indexok(t) && allow(r,c)); return p[t * nr*nc + c * nr + r]; }
   const SCLR& get(uint r, uint c=0, uint t=0) const
@@ -238,6 +243,8 @@ class Frame
   #endif
   // bool  readstring(const string& s, bool header=0);
 
+  ostream& out(ostream &os, bool natural=true);
+
   // Matrix Functions.
 
   // Fill this matrix from M starting at (r,c).
@@ -273,7 +280,7 @@ typedef Frame<double> MatrixFrame;
 
 // y = alpha x + y.
 template<typename SCLR>
-void axpy(SCLR alpha, Frame<SCLR> x, Frame<SCLR> y); 
+void axpy(SCLR alpha, Frame<SCLR> x, Frame<SCLR> y);
 
  // x'y
 template<typename SCLR>
@@ -281,7 +288,7 @@ SCLR dot(Frame<SCLR> x, Frame<SCLR> y);
 
 // c = alpha op(a) * op(b) + beta c.
 template<typename SCLR>
-void gemm(Frame<SCLR> c, Frame<SCLR> a, Frame<SCLR> b, char ta='N', char tb='N', SCLR alpha=1.0, SCLR beta=0.0); 
+void gemm(Frame<SCLR> c, Frame<SCLR> a, Frame<SCLR> b, char ta='N', char tb='N', SCLR alpha=1.0, SCLR beta=0.0);
 
 // b = alpha op(a) * b  OR  b = alpha b * op(a) where a is triangular.
 template<typename SCLR>
@@ -315,7 +322,7 @@ template<typename SCLR>
 int chol(Frame<SCLR> a, char uplo='L');
 
 //--------------------------------------------------------------------
-  
+
 // BLAS Level 1
 // BLAS Level 3
 // LAPACK
@@ -363,7 +370,7 @@ extern "C" {
   void dpotrf_(char* UPLO, int* N, double* A, int* LDA, int* INFO);
 
   // float
- 
+
   void saxpy_(int* N, float* DA, float* DX, int* INCX, float* DY, int* INCY);
   float sdot_(int* N, float* DX, int* INCX, float* DY, int* INCY);
 
@@ -547,8 +554,7 @@ Frame<SCLR> between(Frame<SCLR> c, const Frame<SCLR> a, const Frame<SCLR> lower,
 template<typename SCLR>
 ostream& operator<<(ostream& os, Frame<SCLR> M)
 {
-  M.write(os, false, false);
-  return os;
+  M.out(os, true);
 }
 
 // Read in data from a string using scan.
@@ -559,6 +565,26 @@ Frame<SCLR>& operator<<(Frame<SCLR>& M, const string& s)
   stringstream ss(s);
   M.scan(ss, false, false);
   return M;
+}
+
+template<typename SCLR>
+ostream& Frame<SCLR>::out(ostream & os, bool natural){
+  if (natural) {
+    for (uint k=0; k<nm; k++) {
+      for (uint i=0; i<nr; i++) {
+	for (uint j=0; j<nc; j++) {
+	  os << operator()(i,j,0);
+	  if (j != (nc-1)) os << " ";
+	}
+	if (i != (nr-1)) os << "\n";
+      }
+      if (k != (nm-1)) os << "\n\n";
+    }
+  }
+  else {
+    write(os, false, false);
+  }
+  return os;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -955,7 +981,7 @@ void syrk(Frame<SCLR> c, Frame<SCLR> a, char ta, SCLR alpha, SCLR beta)
   char tb = ta=='N' ? 'T' : 'N';
   pconform(c, a, a, ta, tb);
   int k = ta=='N' ? a.cols() : a.rows();
-  
+
   rsyrk('U', ta, c.rows(), k, alpha, &a(0), a.rows(), beta, &c(0), c.rows());
 
   // Better way?
