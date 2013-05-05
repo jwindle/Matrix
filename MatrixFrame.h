@@ -236,6 +236,7 @@ class Frame
 
   bool write(      ostream&  os, bool header=0, bool binary=0);
   uint  scan(      istream&  is, bool header=0, bool binary=0);
+  void scanString(const string& s);
 
   #ifndef DISABLE_FIO
   bool write(const string& file, bool header=0, bool binary=0);
@@ -554,17 +555,17 @@ Frame<SCLR> between(Frame<SCLR> c, const Frame<SCLR> a, const Frame<SCLR> lower,
 template<typename SCLR>
 ostream& operator<<(ostream& os, Frame<SCLR> M)
 {
-  M.out(os, true);
+  return M.out(os, true);
 }
 
 // Read in data from a string using scan.
 
 template<typename SCLR>
-Frame<SCLR>& operator<<(Frame<SCLR>& M, const string& s)
+// Frame<SCLR>& operator<<(Frame<SCLR>& M, const string& s)
+void Frame<SCLR>::scanString(const string& s)
 {
   stringstream ss(s);
-  M.scan(ss, false, false);
-  return M;
+  scan(ss, false, false);
 }
 
 template<typename SCLR>
@@ -617,7 +618,7 @@ bool Frame<SCLR>::write(std::ostream& os, bool header, bool binary)
 	for(uint i = 0; i < nr; i++){
 	  os << operator()(i,j,k) << " ";
 	}
-	os << "\n";
+	if ((j+1) != nc) os << "\n";
       }
       if ((k+1) != nm) os << "\n";
     }

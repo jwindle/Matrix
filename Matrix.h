@@ -496,6 +496,7 @@ uint Block<SCLR>::readNatural(istream& is)
     }
   }
 
+  return totalread;
 }
 
 template<typename SCLR>

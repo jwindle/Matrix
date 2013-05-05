@@ -28,10 +28,10 @@ void test_svd2(Block<TReal>& A) {
   Block<TReal> tV;
 
   svd2(U, S, tV, A);
-  cout << "A:\n" << A;
-  cout << "U:\n" << U;
-  cout << "S:\n" << S;
-  cout << "tV:\n" << tV;
+  cout << "A:\n" << A << "\n";
+  cout << "U:\n" << U << "\n";
+  cout << "S:\n" << S << "\n";
+  cout << "tV:\n" << tV << "\n";
 
 }
 
@@ -48,10 +48,10 @@ void test_svd(Block<TReal>& A, char jobz='A', bool padS = false) {
   Block<TReal> tV;
 
   svd(U, S, tV, A, jobz, padS);
-  cout << "A:\n" << A;
-  cout << "U:\n" << U;
-  cout << "S:\n" << S;
-  cout << "tV:\n" << tV;
+  cout << "A:\n" << A << "\n";
+  cout << "U:\n" << U << "\n";
+  cout << "S:\n" << S << "\n";
+  cout << "tV:\n" << tV << "\n";
 
 }
 
@@ -65,7 +65,7 @@ void test_cg(Block<TReal>& A)
   Block<TReal> x(b);
   symsolve(A, x);
 
-  cout << "x:\n" << x;
+  cout << "x:\n" << x << "\n";
 
   Block<TReal> y(b);
   try {
@@ -75,7 +75,7 @@ void test_cg(Block<TReal>& A)
     cout << e.what();
   }
 
-  cout << "y:\n" << y;
+  cout << "y:\n" << y << "\n";
 
 }
 
@@ -95,7 +95,7 @@ void test_read_write() {
 
   A.resize(1);
   A.read("A.mat", true);
-  cout << A;
+  cout << A << "\n";
 
 }
 
@@ -112,13 +112,9 @@ void test_readNatural() {
 
 //------------------------------------------------------------------------------
 void test_out(Block<TReal>& A) {
-  A.out(cout, true);
+  A.out(cout, true) << "\n";
 
-  cout << "\n";
-
-  A.out(cout, false);
-
-  cout << "\n";
+  A.out(cout, false) << "\n";
 }
 
 //------------------------------------------------------------------------------
@@ -126,9 +122,9 @@ void test_syrk() {
 
   Block<TReal> A(3,3);
 
-  A << " 4 0 0 "
-       " 0 4 1 "
-       " 0 1 4 ";
+  A.scanString( " 4 0 0 "
+		" 0 4 1 "
+		" 0 1 4 " );
 
   cout << "A:\n" << A << "\n";
 
@@ -155,12 +151,12 @@ void test_symeigen(Block<TReal>& A) {
   symsqrt(rt, A);
   syminvsqrt(irt, A);
 
-  cout << "A:\n" << A;
-  cout << "U:\n" << evec;
-  cout << "D:\n" << eval;
+  cout << "A:\n" << A << "\n";
+  cout << "U:\n" << evec << "\n";
+  cout << "D:\n" << eval << "\n";
 
-  cout << "rt:\n" << rt;
-  cout << "irt:\n" << irt;
+  cout << "rt:\n" << rt << "\n";
+  cout << "irt:\n" << irt << "\n";
 
 }
 
@@ -185,18 +181,18 @@ void test_op() {
 
   Block<TReal> A(3, 3);
 
-  A << " 1 2 3 "
-       " 4 5 6 "
-       " 7 8 9 " ;
+  A.scanString( " 1 2 3 "
+		" 4 5 6 "
+		" 7 8 9 " );
 
-  cout << A;
+  cout << A << "\n";
 
   Block<TReal> Id("I", 3);
   Block<TReal> B = 5.0 * Id;
 
   Block<TReal> C(0.0, B);
 
-  cout << B ;
+  cout << B << "\n";
 
   cout << hmin(B, A);
 
@@ -212,12 +208,12 @@ void test_copy() {
 
   Block<TReal> A(3, 3);
 
-  A << " 1 2 3 "
-       " 4 5 6 "
-       " 7 8 9 " ;
+  A.scanString( " 1 2 3 "
+		" 4 5 6 "
+		" 7 8 9 " );
 
-  Block<TReal> rows(2); rows << "0 1";
-  Block<TReal> cols(2); cols << "1 2";
+  Block<TReal> rows(2); rows.scanString("0 1");
+  Block<TReal> cols(2); cols.scanString("1 2");
   Block<TReal> B(2,2);
   B.copy(A, rows, cols);
   cout << "A:\n" << A << "\n";
@@ -234,24 +230,35 @@ int main(int argc, char** argv)
   Block<TReal> A(3,4);
 
   // Read in transposed.
-  A << " 4 3 0 "
-       " 0 4 1 "
-       " 0 1 4 "
-       " 3 1 1 ";
+  A.scanString( " 4 3 0 "
+		" 0 4 1 "
+		" 0 1 4 "
+		" 3 1 1 " );
 
+  // printf("Test svd:\n");
   // test_svd(A, 'A');
   // test_svd(A, 'S');
+
+  // printf("Test svd2:\n");
   // test_svd2(A);
 
   // A.resize(3,4);
 
+  // printf("Test svd:\n");
   // test_svd(A, 'A', true);
   // test_svd(A, 'S', true);
+
+  // printf("Test svd2:\n");
   // test_svd2(A);
 
+  printf("Test syrk:\n");
+  test_syrk();
+
+  printf("Test readNatural:\n");
   test_readNatural();
 
-  // test_out(A);
+  printf("Test out:\n");
+  test_out(A);
 
   return 0;
 
