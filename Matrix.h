@@ -132,17 +132,21 @@ class Block : public Frame<SCLR>
   template<typename IDX> void clone(const Frame<SCLR>& M, const Frame<IDX>& rs, uint c);
   template<typename IDX> void clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs);
   // void copy(const Block& M);
-  //void cbind(const Frame<SCLR>& M);
+  Block<SCLR>& cbind(const Frame<SCLR>& M);
   //void rbind(const Frame<SCLR>& M);
 
   // Read //
-  uint read(      istream&  is, bool header=0, bool binary=0);
-  uint readstring(const string& s, bool header=0);
-  uint readNatural(istream& is);
-  uint readNatural(const string& file);
+  uint load(istream&  is, bool header=0, bool binary=0); // Uses scan.
+  uint read(istream& is, bool natural=true);             // Read natural (row-wise) or transpose (col-wise).
+  uint read(const string& file, bool natural=true);
+  uint readString(const string& s, bool natural=true);
   #ifndef DISABLE_FIO
-  uint read(const string& file, bool header=0, bool binary=0);
+  uint load(const string& file, bool header=0, bool binary=0);
   #endif
+
+  // Change to:
+  // save, load  -- read columns by lines of file.
+  // read, write -- do "naturally" using characters.
 
   // Writing is taken care of in Frame<SCLR>.h.
   // Block operations are taken care of in Frame<SCLR>.h
@@ -314,16 +318,23 @@ void Block<SCLR>::clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs)
   Frame<SCLR>::copy(M, r, cs);
 }
 
-// void Block::cbind(const Frame<SCLR>& M)
-// {
-//   sizecheck(mats()==M.mats() && rows()==M.rows());
-//   Block temp(*this);
-//   resize(rows(), cols() + M.cols(), mats());
-//   for(uint m = 0; m < mats(); ++m){
-//     copy(temp[m], 0, 0);
-//     col(nc, M.cols()).copy(M[m], 0, 0);
-//   }
-// }
+template <typename SCLR>
+Block<SCLR>& Block<SCLR>::cbind(const Frame<SCLR>& M)
+{
+  sizecheck(this->mats()==1);
+  uint offset    = this->vol();
+  uint extracols = M.vol() / this->rows();
+  if (M.vol() % this->rows() != 0) {
+    extracols++;
+    fprintf(stderr, "Warning: Block::cbind: rows does not evenly divide M.vol().\n");
+  }
+  resize(this->rows(), this->cols() + extracols, 1);
+
+  uint mvol = M.vol();
+  for (uint i=0; i < extracols * this->rows(); i++)
+    v[offset + i] = M(i % mvol);
+
+}
 
 // Is it a bad idea to overload a function found in Frame<SCLR>?
 // According to Effective C++ it is, but this makes things mroe
@@ -373,7 +384,7 @@ Block<SCLR>& Block<SCLR>::operator= (const Frame<SCLR> &M)
 // the dimensions of this matrix.
 
 template<typename SCLR>
-uint Block<SCLR>::read( std::istream& is, bool header, bool binary)
+uint Block<SCLR>::load( std::istream& is, bool header, bool binary)
 {
   // Tell us if something is wrong.
   if (!is || is.eof())  return 0;
@@ -409,35 +420,32 @@ uint Block<SCLR>::read( std::istream& is, bool header, bool binary)
 
 #ifndef DISABLE_FIO
 template<typename SCLR>
-uint Block<SCLR>::read(const string& file, bool header, bool binary)
+uint Block<SCLR>::load(const string& file, bool header, bool binary)
 {
   std::ifstream ifs(file.c_str());
   if(!ifs){
     fprintf(stderr, "Cannot read file %s.\n", file.c_str());
     return 0;
   }
-  return read(ifs, header, binary);
+  return load(ifs, header, binary);
 } // read
 #endif
 
 template<typename SCLR>
-uint Block<SCLR>::readstring(const string& s, bool header)
+uint Block<SCLR>::readString(const string& s, bool natural)
 {
   stringstream ss(s);
-  return read(ss, header, false);
+  return read(ss, natural);
 } // readstring
 
 template<typename SCLR>
-uint Block<SCLR>::readNatural(istream& is)
+uint Block<SCLR>::read(istream& is, bool natural)
 {
   uint totalread = 0;
   uint numrows   = 0;
   uint nummat    = 0;
 
   vector<SCLR> space(0);
-
-  char prev = '1';
-  char curr;
 
   while (!is.eof()) {
     stringstream ss;
@@ -476,23 +484,38 @@ uint Block<SCLR>::readNatural(istream& is)
 
   int numcols = totalread / numrows;
   if (totalread % numrows != 0) {
-    fprintf(stderr, "Number of rows read does not evenly divide number of items read.\n");
+    fprintf(stderr, "Warning: Number of rows read does not evenly divide number of items read.\n");
     numcols++;
   }
 
-  // std::cout << "Size: " << v.size() << "\n";
-  // fprintf(stderr, "Read: %d rows %d total.  Assume %d cols.  Space length: %d.\n", numrows, totalread, numcols, (uint)v.size());
+  uint newarea = numrows * numcols;
+
+  space.resize(newarea);
+  for (uint i=totalread; i<newarea; i++) space[i] = (SCLR) 0;
+
+  fprintf(stderr, "Read: %d rows %d total.  Assume %d cols.  Space size: %d.\n", numrows, totalread, numcols, (uint)v.size());
+
+  if (!natural) {
+    uint tempcols = numcols;
+    numcols = numrows;
+    numrows = tempcols;
+  }
 
   resize(numrows, numcols, 1);
 
-  int iter = 0;
+  int idx;
+  double val = 0;
   for (uint j=0; j<numcols; j++) {
     for (uint i=0; i<numrows; i++) {
-      // std::cout << " (" << CDX(j,i,numcols) << ") ";
-      double val = 0;
-      int idx = CDX(j,i,numcols);
-      if (idx < totalread) val = space[idx];
-      this->operator()(i,j,0) = val;
+      if (natural) idx = CDX(j,i,numcols);
+      else         idx = CDX(i,j,numrows);
+      val = space[idx];
+      try {
+	this->operator()(i,j,0) = val;
+      }
+      catch(std::exception& e) {
+	std::cerr << e.what() << "\n";
+      }
     }
   }
 
@@ -500,14 +523,14 @@ uint Block<SCLR>::readNatural(istream& is)
 }
 
 template<typename SCLR>
-uint Block<SCLR>::readNatural(const string& file)
+uint Block<SCLR>::read(const string& file, bool natural)
 {
   std::ifstream ifs(file.c_str());
   if(!ifs){
     fprintf(stderr, "Cannot read file %s.\n", file.c_str());
     return 0;
   }
-  return readNatural(ifs);
+  return read(ifs, natural);
 }
 
 

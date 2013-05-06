@@ -211,11 +211,6 @@ class Frame
   const SCLR& vec(uint i) const
   { idxcheck(i < nr*nc*nm); return p[i]; }
 
-  // Returns a Frame pointing to the ith matrix or,
-  // if there is one matrix, to the ith column.
-  Frame<SCLR> operator[](uint i)
-  { idxcheck(indexok(i)); return Frame<SCLR>(&p[0+i*area()], nr, nc); }
-
   // Get the pointer.  Be wary.
   // const double* const getp()
   // { return p; }
@@ -230,17 +225,27 @@ class Frame
   // void thincopy(Frame& M);          // Copy pointer and dimensions.
   Frame<SCLR> fill(const SCLR& x);            // Fill with value.
   Frame<SCLR> col(uint c, uint num=1); // The c-th to c+num-1th col.
+  Frame<SCLR> column(uint c, uint num=1); // The c-th to c+num-1th col.
   Frame<SCLR> dim(uint r, uint c, uint m=1); // Return a MF with different, compatible dim.
+  void        reshape(uint r, uint c, uint m=1);
+
+  // Returns a Frame pointing to the ith matrix or,
+  // if there is one matrix, to the ith column.
+  Frame<SCLR> matrix(uint i)
+  { idxcheck(indexok(i)); return Frame<SCLR>(&p[0+i*area()], nr, nc); }
+  Frame<SCLR> operator[](uint i)
+  { return matrix(i); }
 
   // Read / Write.
 
-  bool write(      ostream&  os, bool header=0, bool binary=0);
-  uint  scan(      istream&  is, bool header=0, bool binary=0);
-  void scanString(const string& s);
+  bool dump(      ostream&  os, bool header=0, bool binary=0); // Print out row on each line.
+  uint scan(      istream&  is, bool header=0, bool binary=0); // Read in row from each line.
+  void scanString(const string& s);                            // Read in by row from string.
 
   #ifndef DISABLE_FIO
-  bool write(const string& file, bool header=0, bool binary=0);
-  uint  scan(const string& file, bool header=0, bool binary=0);
+  bool dump(const string& file, bool header=0, bool binary=0);
+  bool save(const string& file, bool header=0, bool binary=0); // Save using dump.
+  uint scan(const string& file, bool header=0, bool binary=0); // Read in scan.
   #endif
   // bool  readstring(const string& s, bool header=0);
 
@@ -400,6 +405,8 @@ template<typename SCLR>
 void Frame<SCLR>::copy(const Frame<SCLR>& M)
 {
   if (this==&M) return;
+  // if (p==&M(0)) return;
+  if (overlap(*this, M)) throw std::runtime_error("Frame<SCLR>::copy memory overlap.\n");
   idxcheck(nr==M.rows() && nc==M.cols() && nm==M.mats());
   for(uint i = 0; i < vol(); i++) p[i] = M.vec(i);
 } // copy
@@ -425,6 +432,12 @@ Frame<SCLR> Frame<SCLR>::col(uint c, uint num)
 }
 
 template<typename SCLR>
+Frame<SCLR> Frame<SCLR>::column(uint c, uint num)
+{
+  col(c, num);
+}
+
+template<typename SCLR>
 Frame<SCLR> Frame<SCLR>::fill(const SCLR& d)
 {
   for(uint i = 0; i < vol(); i++) p[i] = d;
@@ -436,6 +449,15 @@ Frame<SCLR> Frame<SCLR>::dim(uint r, uint c, uint m)
 {
   sizecheck (r*c*m==nr*nc*nm);
   return Frame<SCLR>(p, r, c, m);
+}
+
+template<typename SCLR>
+void Frame<SCLR>::reshape(uint r, uint c, uint m)
+{
+  sizecheck (r*c*m==nr*nc*nm);
+  nr = r;
+  nc = c;
+  nm = m;
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -558,16 +580,6 @@ ostream& operator<<(ostream& os, Frame<SCLR> M)
   return M.out(os, true);
 }
 
-// Read in data from a string using scan.
-
-template<typename SCLR>
-// Frame<SCLR>& operator<<(Frame<SCLR>& M, const string& s)
-void Frame<SCLR>::scanString(const string& s)
-{
-  stringstream ss(s);
-  scan(ss, false, false);
-}
-
 template<typename SCLR>
 ostream& Frame<SCLR>::out(ostream & os, bool natural){
   if (natural) {
@@ -583,7 +595,7 @@ ostream& Frame<SCLR>::out(ostream & os, bool natural){
     }
   }
   else {
-    write(os, false, false);
+    dump(os, false, false);
   }
   return os;
 }
@@ -596,7 +608,7 @@ ostream& Frame<SCLR>::out(ostream & os, bool natural){
 // dimensions of the array of matrices.
 
 template<typename SCLR>
-bool Frame<SCLR>::write(std::ostream& os, bool header, bool binary)
+bool Frame<SCLR>::dump(std::ostream& os, bool header, bool binary)
 {
   if (!os) return false;
   // Write binary.
@@ -630,12 +642,18 @@ bool Frame<SCLR>::write(std::ostream& os, bool header, bool binary)
 #ifndef DISABLE_FIO
 
 template<typename SCLR>
-bool Frame<SCLR>::write(const string& file, bool header, bool binary)
+bool Frame<SCLR>::dump(const string& file, bool header, bool binary)
 {
   std::ofstream ofs(file.c_str());
   if (!ofs) return false;
-  return write(ofs, header, binary);
+  return dump(ofs, header, binary);
 } // write
+
+template<typename SCLR>
+bool Frame<SCLR>::save(const string& file, bool header, bool binary)
+{
+  dump(file, header, binary);
+}
 
 #endif
 
@@ -698,6 +716,14 @@ uint Frame<SCLR>::scan(const string& file, bool header, bool binary)
 } // read
 
 #endif
+
+// Read in data from a string using scan.
+template<typename SCLR>
+void Frame<SCLR>::scanString(const string& s)
+{
+  stringstream ss(s);
+  scan(ss, false, false);
+}
 
 //////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////

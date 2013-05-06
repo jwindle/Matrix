@@ -50,8 +50,7 @@ void test_svd(Block<TReal>& A, char jobz='A', bool padS = false) {
   svd(U, S, tV, A, jobz, padS);
   cout << "A:\n" << A << "\n";
   cout << "U:\n" << U << "\n";
-  cout << "S:\n" << S << "\n";
-  cout << "tV:\n" << tV << "\n";
+  cout << "S:\n" << S << "\n"; cout << "tV:\n" << tV << "\n";
 
 }
 
@@ -69,7 +68,7 @@ void test_cg(Block<TReal>& A)
 
   Block<TReal> y(b);
   try {
-  cout << "iter: " << cg(y, A, b, (TReal)10e-8, 100) << "\n";
+    cout << "iter: " << cg(y, A, b, (TReal)10e-8, 100) << "\n";
   }
   catch (std::exception& e) {
     cout << e.what();
@@ -82,36 +81,54 @@ void test_cg(Block<TReal>& A)
 //------------------------------------------------------------------------------
 void test_block_constructor(){
 
+  printf("Test block constructor:\n");
+
   Block<int> C("W", 3);
   cout << "C:\n" << C << "\n";
 
 }
 
 //------------------------------------------------------------------------------
-void test_read_write() {
+void test_dump_load() {
+
+  printf("Test dump/load:\n");
 
   Matrix A("I", 3);
-  cout << A.write("A.mat", true) << "\n";
+  cout << A.dump("A.mat", true) << "\n";
 
   A.resize(1);
-  A.read("A.mat", true);
+  A.load("A.mat", true);
   cout << A << "\n";
 
 }
 
 //------------------------------------------------------------------------------
-void test_readNatural() {
+void test_read() {
   Matrix A;
 
-  A.readNatural("Nat1.mat");
+  printf("Test read:\n");
+
+  printf("Read natural.\n");
+
+  A.read("Nat1.mat");
   A.out(cout, true) << "\n";
 
-  A.readNatural("Nat2.mat");
+  A.read("Nat2.mat");
+  A.out(cout, true) << "\n";
+
+  printf("Read transpose.\n");
+
+  A.read("Nat1.mat", false);
+  A.out(cout, true) << "\n";
+
+  A.read("Nat2.mat", false);
   A.out(cout, true) << "\n";
 }
 
 //------------------------------------------------------------------------------
 void test_out(Block<TReal>& A) {
+  printf("Test out:\n");
+
   A.out(cout, true) << "\n";
 
   A.out(cout, false) << "\n";
@@ -120,11 +137,13 @@ void test_out(Block<TReal>& A) {
 //------------------------------------------------------------------------------
 void test_syrk() {
 
+  printf("Test syrk:\n");
+
   Block<TReal> A(3,3);
 
   A.scanString( " 4 0 0 "
-		" 0 4 1 "
-		" 0 1 4 " );
+                " 0 4 1 "
+                " 0 1 4 " );
 
   cout << "A:\n" << A << "\n";
 
@@ -140,6 +159,8 @@ void test_syrk() {
 
 //------------------------------------------------------------------------------
 void test_symeigen(Block<TReal>& A) {
+
+  printf("Test symeigen:\n");
 
   // EIGENVECTOR DECOMP OF SYM MATRIX
   Block<TReal> evec;
@@ -162,7 +183,9 @@ void test_symeigen(Block<TReal>& A) {
 
 //------------------------------------------------------------------------------
 void test_scan() {
-  // SCAN
+
+  printf("Test scan:\n");
+
   Matrix b(2,2);
   b.scan("b.dat");
   cout << "b:\n" << b;
@@ -170,6 +193,8 @@ void test_scan() {
 
 //------------------------------------------------------------------------------
 void test_max_and_min(Block<TReal>& A) {
+
+  printf("Test max and min:\n");
 
   cout << "Max: " << maxAll(A) << "\n";
   cout << "Min: " << minAll(A) << "\n";
@@ -179,11 +204,13 @@ void test_max_and_min(Block<TReal>& A) {
 //------------------------------------------------------------------------------
 void test_op() {
 
+  printf("Test op:\n");
+
   Block<TReal> A(3, 3);
 
   A.scanString( " 1 2 3 "
-		" 4 5 6 "
-		" 7 8 9 " );
+                " 4 5 6 "
+                " 7 8 9 " );
 
   cout << A << "\n";
 
@@ -206,11 +233,13 @@ void test_op() {
 //------------------------------------------------------------------------------
 void test_copy() {
 
+  printf("Test copy:\n");
+
   Block<TReal> A(3, 3);
 
   A.scanString( " 1 2 3 "
-		" 4 5 6 "
-		" 7 8 9 " );
+                " 4 5 6 "
+                " 7 8 9 " );
 
   Block<TReal> rows(2); rows.scanString("0 1");
   Block<TReal> cols(2); cols.scanString("1 2");
@@ -218,6 +247,62 @@ void test_copy() {
   B.copy(A, rows, cols);
   cout << "A:\n" << A << "\n";
   cout << "B:\n" << B << "\n";
+
+  Block<TReal> C(A);
+  cout << "A:\n" << A << "\n";
+  cout << "C:\n" << C << "\n";
+
+  try {
+    Frame<TReal> D(A);
+    D.copy(A);
+  }
+  catch(std::exception& e) {
+    std::cerr << e.what();
+  }
+}
+
+//------------------------------------------------------------------------------
+void test_reshape() {
+
+  printf("Test reshape:\n");
+
+  Block<TReal> A(3, 3);
+
+  A.scanString( " 1 2 3 "
+                " 4 5 6 "
+                " 7 8 9 " );
+
+  A.reshape(1,9);
+
+  cout << A << "\n";
+
+}
+
+//------------------------------------------------------------------------------
+void test_cbind() {
+
+  printf("Test cbind:\n");
+
+  Block<TReal> A(3, 3);
+
+  A.scanString( " 1 2 3 "
+                " 4 5 6 "
+                " 7 8 9 " );
+
+  Block<TReal> B(3,1);
+  B.scanString( " 4 5 6 " );
+
+  A.cbind(A);
+  cout << A << "\n";
+
+  A.cbind(B);
+  cout << A << "\n";
+
+  Block<TReal> C(2,1);
+  C.scanString( " 4 5 " );
+
+  A.cbind(C);
+  cout << A << "\n";
 
 }
 
@@ -231,34 +316,33 @@ int main(int argc, char** argv)
 
   // Read in transposed.
   A.scanString( " 4 3 0 "
-		" 0 4 1 "
-		" 0 1 4 "
-		" 3 1 1 " );
+                " 0 4 1 "
+                " 0 1 4 "
+                " 3 1 1 " );
 
-  // printf("Test svd:\n");
   // test_svd(A, 'A');
   // test_svd(A, 'S');
 
-  // printf("Test svd2:\n");
   // test_svd2(A);
 
   // A.resize(3,4);
 
-  // printf("Test svd:\n");
   // test_svd(A, 'A', true);
   // test_svd(A, 'S', true);
 
-  // printf("Test svd2:\n");
   // test_svd2(A);
 
-  printf("Test syrk:\n");
-  test_syrk();
+  // test_syrk();
 
-  printf("Test readNatural:\n");
-  test_readNatural();
+  test_read();
 
-  printf("Test out:\n");
-  test_out(A);
+  // test_out(A);
+
+  // test_copy();
+
+  // test_reshape();
+
+  // test_cbind();
 
   return 0;
 
