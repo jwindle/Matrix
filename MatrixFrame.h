@@ -591,7 +591,7 @@ ostream& Frame<SCLR>::out(ostream & os, bool natural){
 	}
 	if (i != (nr-1)) os << "\n";
       }
-      if (k != (nm-1)) os << "\n\n";
+      if (k != (nm-1)) os << "\n";
     }
   }
   else {

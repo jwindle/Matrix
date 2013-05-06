@@ -304,6 +304,9 @@ void test_cbind() {
   A.cbind(C);
   cout << A << "\n";
 
+  B.cbind(B).cbind(B);
+  cout << B << "\n";
+
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -334,7 +337,7 @@ int main(int argc, char** argv)
 
   // test_syrk();
 
-  test_read();
+  // test_read();
 
   // test_out(A);
 
@@ -342,7 +345,7 @@ int main(int argc, char** argv)
 
   // test_reshape();
 
-  // test_cbind();
+  test_cbind();
 
   return 0;
 

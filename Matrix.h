@@ -322,18 +322,23 @@ template <typename SCLR>
 Block<SCLR>& Block<SCLR>::cbind(const Frame<SCLR>& M)
 {
   sizecheck(this->mats()==1);
+
+  uint mvol  = M.vol();
+  uint pcols = this->cols();
+  uint prows = this->rows();
+
   uint offset    = this->vol();
-  uint extracols = M.vol() / this->rows();
-  if (M.vol() % this->rows() != 0) {
+  uint extracols = mvol / prows;
+  if (M.vol() % prows != 0) {
     extracols++;
     fprintf(stderr, "Warning: Block::cbind: rows does not evenly divide M.vol().\n");
   }
-  resize(this->rows(), this->cols() + extracols, 1);
+  resize(prows, pcols + extracols, 1);
 
-  uint mvol = M.vol();
-  for (uint i=0; i < extracols * this->rows(); i++)
+  for (uint i=0; i < extracols * prows; i++)
     v[offset + i] = M(i % mvol);
 
+  return *this;
 }
 
 // Is it a bad idea to overload a function found in Frame<SCLR>?
