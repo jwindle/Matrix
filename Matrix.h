@@ -79,8 +79,8 @@ class Block : public Frame<SCLR>
  public:
 
   // Constructors.
-  Block() : Frame<SCLR>(), v(1)
-    { p = &v[0]; nr = 1; nc = 1; nm = 1; }
+  Block() : Frame<SCLR>(), v(0)
+    { p = NULL; nr = 0; nc = 0; nm = 0; }
   Block(uint r, uint c=1, uint n=1) : Frame<SCLR>(), v(r*c*n)
     { p = &v[0]; nr = r; nc = c; nm = n; }
   Block( int r,  int c=1,  int n=1) : Frame<SCLR>(), v(r*c*n)
@@ -136,17 +136,13 @@ class Block : public Frame<SCLR>
   //void rbind(const Frame<SCLR>& M);
 
   // Read //
-  uint load(istream&  is, bool header=0, bool binary=0); // Uses scan.
-  uint read(istream& is, bool natural=true);             // Read natural (row-wise) or transpose (col-wise).
+  uint load(istream&  is, bool header=0, bool binary=0); // Load saved data set.
+  uint read(istream& is, bool natural=true);             // Read a matrix, natural (row-wise) or transpose (col-wise).
   uint read(const string& file, bool natural=true);
   uint readString(const string& s, bool natural=true);
   #ifndef DISABLE_FIO
   uint load(const string& file, bool header=0, bool binary=0);
   #endif
-
-  // Change to:
-  // save, load  -- read columns by lines of file.
-  // read, write -- do "naturally" using characters.
 
   // Writing is taken care of in Frame<SCLR>.h.
   // Block operations are taken care of in Frame<SCLR>.h
@@ -321,6 +317,12 @@ void Block<SCLR>::clone(const Frame<SCLR>& M, uint r, const Frame<IDX>& cs)
 template <typename SCLR>
 Block<SCLR>& Block<SCLR>::cbind(const Frame<SCLR>& M)
 {
+  // If empty.
+  if (this->vol()==0) {
+    clone(M);
+    return *this;
+  }
+
   sizecheck(this->mats()==1);
 
   uint mvol  = M.vol();
@@ -498,7 +500,7 @@ uint Block<SCLR>::read(istream& is, bool natural)
   space.resize(newarea);
   for (uint i=totalread; i<newarea; i++) space[i] = (SCLR) 0;
 
-  fprintf(stderr, "Read: %d rows %d total.  Assume %d cols.  Space size: %d.\n", numrows, totalread, numcols, (uint)v.size());
+  // fprintf(stderr, "Read: %d rows %d total.  Assume %d cols.  Space size: %d.\n", numrows, totalread, numcols, (uint)v.size());
 
   if (!natural) {
     uint tempcols = numcols;
