@@ -313,6 +313,20 @@ void test_cbind() {
 
 }
 
+//------------------------------------------------------------------------------
+void test_mem() {
+
+  int N = 4000000;
+  int P = 10;
+
+  Block<char>   A(N,P);  
+  Block<float>  B(N,P);
+  Block<double> C(N,P);
+
+  printf("Mem sizes (bytes):\n A: %u, B: %u, C: %u\n", A.mem(), B.mem(), C.mem());
+
+}
+
 ////////////////////////////////////////////////////////////////////////////////
 
 int main(int argc, char** argv)
@@ -349,7 +363,9 @@ int main(int argc, char** argv)
 
   // test_reshape();
 
-  test_cbind();
+  // test_cbind();
+
+  test_mem();
 
   return 0;
 
