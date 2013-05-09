@@ -144,6 +144,7 @@ class Frame
   inline uint area() const { return nr * nc; }
   inline uint vol()  const { return nr * nc * nm; }
   inline uint size() const { return nr * nc * nm; }
+  inline uint mem()  const { return sizeof(SCLR) * size(); }
 
   // Matrix Access
 
@@ -404,9 +405,16 @@ extern "C" {
 template<typename SCLR>
 void Frame<SCLR>::copy(const Frame<SCLR>& M)
 {
-  if (this==&M) return;
+  if (sameframe(M)) return;
   // if (p==&M(0)) return;
-  if (overlap(*this, M)) throw std::runtime_error("Frame<SCLR>::copy memory overlap.\n");
+  if (overlap(*this, M)) {
+    #ifdef NTHROW
+    throw std::runtime_error("Frame<SCLR>::copy memory overlap.\n");
+    #else
+    fprintf(stderr, "Warning::Frame<SCLR>::copy memory overlaps.\n");
+    #endif
+    // I should return 0/1 for success/failure.
+  }
   idxcheck(nr==M.rows() && nc==M.cols() && nm==M.mats());
   for(uint i = 0; i < vol(); i++) p[i] = M.vec(i);
 } // copy
@@ -454,10 +462,12 @@ Frame<SCLR> Frame<SCLR>::dim(uint r, uint c, uint m)
 template<typename SCLR>
 void Frame<SCLR>::reshape(uint r, uint c, uint m)
 {
-  sizecheck (r*c*m==nr*nc*nm);
-  nr = r;
-  nc = c;
-  nm = m;
+  if (sizecheck (r*c*m==nr*nc*nm) ) {
+    nr = r;
+    nc = c;
+    nm = m;
+  }
+  // return 1/0 on success/failure.
 }
 
 //////////////////////////////////////////////////////////////////////
@@ -652,7 +662,7 @@ bool Frame<SCLR>::dump(const string& file, bool header, bool binary)
 template<typename SCLR>
 bool Frame<SCLR>::save(const string& file, bool header, bool binary)
 {
-  dump(file, header, binary);
+  return dump(file, header, binary);
 }
 
 #endif
